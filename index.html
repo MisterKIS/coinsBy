@@ -1,24 +1,274 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитика монет НБРБ</title>
+    
+    <!-- Библиотеки -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .coin-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .coin-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
 <body>
-  <h1>Тест CORS</h1>
-  <div id="result">Нажмите кнопку</div>
-  <button onclick="test()">Тестировать</button>
-  
-  <script>
-    async function test() {
-      const url = 'https://script.google.com/macros/s/AKfycbzEiDV3pWTTlAhxOMxmLF055Mvg7x9jsEScU1CFSwA/dev?type=test';
-      
-      try {
-        const response = await fetch(url);
-        const text = await response.text();
-        document.getElementById('result').innerHTML = 
-          '<pre>' + text + '</pre>';
-      } catch (error) {
-        document.getElementById('result').innerHTML = 
-          'ОШИБКА: ' + error.message;
-      }
-    }
-  </script>
+    <div class="container">
+        <!-- Шапка -->
+        <div class="dashboard-card text-center mb-4">
+            <h1 class="display-5 fw-bold text-primary">
+                <i class="bi bi-coin"></i> Аналитика монет НБРБ
+            </h1>
+            <p class="lead text-muted">Данные загружаются напрямую из Google Sheets API</p>
+        </div>
+
+        <!-- Кнопки загрузки -->
+        <div class="dashboard-card mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-primary btn-lg w-100 mb-2" onclick="loadCatalog()">
+                        📋 Загрузить каталог
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-success btn-lg w-100 mb-2" onclick="loadSales()">
+                        💰 Загрузить продажи
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Результаты -->
+        <div class="dashboard-card">
+            <div id="loading" class="text-center" style="display: none;">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                <p class="mt-3">Загрузка данных...</p>
+            </div>
+            
+            <div id="content"></div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+        </div>
+        
+        <!-- Статистика -->
+        <div class="dashboard-card">
+            <h5>📊 Статистика</h5>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        // КОНФИГУРАЦИЯ - ЗАМЕНИТЕ НА СВОИ ДАННЫЕ!
+        const CONFIG = {
+            SPREADSHEET_ID: '1t0sX53AIZicW2r_RZcAb64BVPSZXUWG__IFmJLPoupA',
+            API_KEY: 'AKfycbyNymZWOMKyzT8VE389ezEvY6COfHNccSJssz4IQ5YHGCZ467eOhl82-P5GS7pU7LgXaA', // Замените на реальный ключ
+            RANGES: {
+                CATALOG: 'catalog!A:Z',    // Весь лист catalog
+                SALES: 'true!A:Z'          // Весь лист true
+            }
+        };
+
+        // Универсальная функция загрузки данных
+        async function loadSheetData(rangeName) {
+            const range = CONFIG.RANGES[rangeName];
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
+            
+            try {
+                showLoading(true);
+                hideError();
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return processSheetData(data.values);
+                
+            } catch (error) {
+                showError(`Ошибка загрузки: ${error.message}`);
+                return null;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Обработка данных из Google Sheets API
+        function processSheetData(values) {
+            if (!values || values.length === 0) {
+                return [];
+            }
+            
+            const headers = values[0];
+            const rows = values.slice(1);
+            
+            // Преобразуем в массив объектов
+            return rows.map(row => {
+                let obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = row[index] || '';
+                });
+                return obj;
+            });
+        }
+
+        // Загрузка каталога
+        async function loadCatalog() {
+            const data = await loadSheetData('CATALOG');
+            if (!data) return;
+            
+            displayCatalog(data);
+            updateStats(`Загружено ${data.length} монет`);
+        }
+
+        // Загрузка продаж
+        async function loadSales() {
+            const data = await loadSheetData('SALES');
+            if (!data) return;
+            
+            displaySales(data);
+            updateStats(`Загружено ${data.length} продаж`);
+        }
+
+        // Отображение каталога
+        function displayCatalog(coins) {
+            let html = `
+                <h4 class="mb-4">📚 Каталог монет (${coins.length})</h4>
+                <div class="row">
+            `;
+            
+            // Показываем первые 20 монет
+            coins.slice(0, 20).forEach(coin => {
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="coin-card">
+                            <h6 class="fw-bold">${coin.название || 'Без названия'}</h6>
+                            <div class="small">
+                                <div><strong>Год:</strong> ${coin.год || '-'}</div>
+                                <div><strong>Тема:</strong> ${coin.тема || '-'}</div>
+                                <div><strong>Тираж:</strong> ${formatNumber(coin.тираж)}</div>
+                                <div><strong>Цена НБРБ:</strong> ${coin['цена НБРБ'] || '-'} €</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            
+            if (coins.length > 20) {
+                html += `<p class="text-muted mt-3">Показано 20 из ${coins.length} монет</p>`;
+            }
+            
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Отображение продаж
+        function displaySales(sales) {
+            let html = `
+                <h4 class="mb-4">💰 История продаж (${sales.length})</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Монета</th>
+                                <th>Тип</th>
+                                <th>Цена</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            // Показываем последние 20 продаж
+            sales.slice(-20).reverse().forEach(sale => {
+                html += `
+                    <tr>
+                        <td>${sale.Дата ? sale.Дата.split(' ')[0] : '-'}</td>
+                        <td>${truncate(sale.Название || sale.каталог || '', 30)}</td>
+                        <td><span class="badge ${sale.тип === 'аукцион' ? 'bg-warning' : 'bg-info'}">${sale.тип || '-'}</span></td>
+                        <td class="fw-bold">${sale['Цена завершения'] || '0'} €</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            if (sales.length > 20) {
+                html += `<p class="text-muted">Показано 20 из ${sales.length} продаж</p>`;
+            }
+            
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Вспомогательные функции
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('error').innerHTML = message;
+            document.getElementById('error').style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function updateStats(message) {
+            document.getElementById('stats').innerHTML = `
+                <div class="alert alert-success">
+                    ✅ ${message}
+                    <br>
+                    <small>Обновлено: ${new Date().toLocaleTimeString()}</small>
+                </div>
+            `;
+        }
+
+        function formatNumber(num) {
+            if (!num) return '-';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
+        function truncate(str, maxLength) {
+            if (!str) return '';
+            return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+        }
+
+        // Автозагрузка при старте
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStats('Нажмите кнопку для загрузки данных');
+        });
+    </script>
 </body>
 </html>
