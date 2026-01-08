@@ -412,448 +412,763 @@
 
     <!-- JavaScript -->
     <script>
-        // Конфигурация
-        const CONFIG = {
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzEiDV3pWTTlAhxOMxmLF055Mvg7x9jsEScU1CFSwA/dev',
-            CACHE_DURATION: 5 * 60 * 1000, // 5 минут
-            ITEMS_PER_PAGE: 20
-        };
+    // Конфигурация
+    const CONFIG = {
+        GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzEiDV3pWTTlAhxOMxmLF055Mvg7x9jsEScU1CFSwA/dev',
+        CACHE_DURATION: 5 * 60 * 1000, // 5 минут
+        ITEMS_PER_PAGE: 20
+    };
+    
+    // Глобальные переменные
+    let allCoins = [];
+    let allSales = [];
+    let currentFilters = {};
+    let currentViewMode = 'grid';
+    
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAllData();
+        setupEventListeners();
+        initCharts();
+    });
+    
+    // Функция для преобразования данных из Google Sheets в массив объектов
+    function parseSheetData(data) {
+        if (!data || !data.values || data.values.length < 2) {
+            return [];
+        }
         
-        // Глобальные переменные
-        let allCoins = [];
-        let allSales = [];
-        let currentFilters = {};
-        let currentViewMode = 'grid';
+        const rows = data.values;
+        const headers = rows[0].map(h => h.trim().toLowerCase());
         
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAllData();
-            setupEventListeners();
-            initCharts();
+        return rows.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+                if (row[index] !== undefined) {
+                    obj[header] = row[index];
+                } else {
+                    obj[header] = '';
+                }
+            });
+            return obj;
         });
-        
-        // Загрузка всех данных
-        async function loadAllData() {
-            try {
-                showLoading(true);
-                
-                // Загружаем каталог и продажи параллельно
-                const [catalogData, salesData] = await Promise.all([
-                    fetchData('type=catalog'),
-                    fetchData('type=sales')
-                ]);
-                
-                allCoins = catalogData || [];
-                allSales = salesData || [];
-                
-                updateStats();
-                renderCoinsGrid();
-                populateFilters();
-                updateRecentSales();
-                updateLastUpdated();
-                
-                showLoading(false);
-                
-            } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
-                showError('Не удалось загрузить данные');
-            }
-        }
-        
-        // Обновление статистики
-        function updateStats() {
-            // Здесь будет расчет статистики
-            document.getElementById('last-updated').innerHTML = 
-                `<i class="bi bi-clock"></i> Обновлено: ${new Date().toLocaleTimeString()}`;
-        }
-        
-        // Рендер сетки монет
-        function renderCoinsGrid() {
-            const container = document.getElementById('coins-grid');
-            const noResults = document.getElementById('no-results');
+    }
+    
+    // Загрузка всех данных
+    async function loadAllData() {
+        try {
+            showLoading(true);
             
-            // Фильтрация
-            let filteredCoins = filterCoins(allCoins);
+            // Загружаем каталог и продажи параллельно
+            const [catalogData, salesData] = await Promise.all([
+                fetchData('type=catalog'),
+                fetchData('type=sales')
+            ]);
             
-            if (filteredCoins.length === 0) {
-                container.style.display = 'none';
-                noResults.style.display = 'block';
-                return;
-            }
+            // Парсим данные каталога
+            allCoins = parseSheetData(catalogData);
+            console.log('Загружено монет:', allCoins.length);
             
-            container.style.display = 'flex';
-            noResults.style.display = 'none';
+            // Парсим данные продаж
+            allSales = parseSheetData(salesData);
+            console.log('Загружено продаж:', allSales.length);
             
-            // Генерация HTML для карточек
-            let html = '';
-            filteredCoins.slice(0, CONFIG.ITEMS_PER_PAGE).forEach(coin => {
-                html += `
-                <div class="col-xl-4 col-lg-6 col-md-6">
-                    <div class="coin-card">
-                        <div class="coin-image">
-                            ${coin.изображение ? 
-                                `<img src="${getImagePreview(coin.изображение)}" style="width:100%;height:100%;object-fit:cover;">` : 
-                                `<i class="bi bi-coin"></i>`}
-                        </div>
-                        <div class="p-3">
-                            <h5 class="mb-1" title="${coin.название}">${truncate(coin.название, 30)}</h5>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="badge bg-primary">${coin.год}</span>
-                                <span class="badge bg-info">${coin.тема || 'Без темы'}</span>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted d-block">Тираж: ${formatNumber(coin.тираж)}</small>
-                                <small class="text-muted">Материал: ${coin.материал || '-'}</small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <small class="text-muted d-block">Номинал: €${coin['цена НБРБ'] || '0'}</small>
-                                    <div class="trend-up fw-bold">${calculateGrowth(coin)}%</div>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        onclick="showCoinDetails('${coin.название}')">
-                                    Детали
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        // Фильтрация монет
-        function filterCoins(coins) {
-            return coins.filter(coin => {
-                // Фильтр по году
-                if (currentFilters.year && coin.год != currentFilters.year) return false;
-                
-                // Фильтр по теме
-                if (currentFilters.theme && coin.тема !== currentFilters.theme) return false;
-                
-                // Фильтр по материалу
-                if (currentFilters.material && coin.материал !== currentFilters.material) return false;
-                
-                // Поиск по названию
-                if (currentFilters.search) {
-                    const searchTerm = currentFilters.search.toLowerCase();
-                    if (!coin.название.toLowerCase().includes(searchTerm)) return false;
-                }
-                
-                return true;
-            });
-        }
-        
-        // Показать детали монеты
-        async function showCoinDetails(coinName) {
-            const modal = document.getElementById('coinModal');
-            const title = document.getElementById('coinModalTitle');
-            const body = document.getElementById('coinModalBody');
-            
-            modal.style.display = 'flex';
-            title.textContent = coinName;
-            
-            // Показать спиннер загрузки
-            body.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2">Загрузка данных...</p>
-                </div>
-            `;
-            
-            try {
-                // Здесь будет загрузка детальных данных о монете
-                const coin = allCoins.find(c => c.название === coinName);
-                const sales = allSales.filter(s => s.каталог === coinName);
-                
-                body.innerHTML = generateCoinDetailsHTML(coin, sales);
-            } catch (error) {
-                body.innerHTML = `
-                    <div class="alert alert-danger">
-                        Не удалось загрузить данные: ${error.message}
-                    </div>
-                `;
-            }
-        }
-        
-        // Закрыть модальное окно
-        function closeModal() {
-            document.getElementById('coinModal').style.display = 'none';
-        }
-        
-        // Вспомогательные функции
-        function fetchData(params) {
-            return fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?${params}`)
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    return response.json();
-                });
-        }
-        
-        function showLoading(show) {
-            document.getElementById('loading-coins').style.display = show ? 'block' : 'none';
-        }
-        
-        function showError(message) {
-            alert(message);
-        }
-        
-        function truncate(str, maxLength) {
-            return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
-        }
-        
-        function formatNumber(num) {
-            return num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : '0';
-        }
-        
-        function calculateGrowth(coin) {
-            // Здесь будет расчет роста цены
-            return Math.floor(Math.random() * 5000); // Заглушка
-        }
-        
-        function getImagePreview(url) {
-            // Преобразование Google Drive ссылки в превью
-            if (url.includes('drive.google.com')) {
-                const match = url.match(/\/d\/([^\/]+)/);
-                if (match) {
-                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
-                }
-            }
-            return url;
-        }
-        
-        function refreshData() {
-            loadAllData();
-        }
-        
-        function clearFilters() {
-            currentFilters = {};
-            document.getElementById('search-input').value = '';
-            document.getElementById('filter-year').value = '';
-            document.getElementById('filter-theme').value = '';
-            document.getElementById('filter-material').value = '';
+            updateStats();
             renderCoinsGrid();
+            populateFilters();
+            updateRecentSales();
+            updateLastUpdated();
+            updateCharts();
+            
+            showLoading(false);
+            
+        } catch (error) {
+            console.error('Ошибка загрузки данных:', error);
+            showError('Не удалось загрузить данные: ' + error.message);
+        }
+    }
+    
+    // Обновление статистики
+    function updateStats() {
+        const totalSales = allSales.length;
+        const activeCoins = [...new Set(allSales.map(s => s.каталог))].length;
+        
+        // Расчет средней цены продаж
+        const totalSalesPrice = allSales.reduce((sum, sale) => {
+            const price = parseFloat(sale['цена завершения']) || 0;
+            return sum + price;
+        }, 0);
+        
+        const avgPrice = totalSales > 0 ? totalSalesPrice / totalSales : 0;
+        
+        // Расчет общего оборота
+        const totalTurnover = allSales.reduce((sum, sale) => {
+            const price = parseFloat(sale['цена завершения']) || 0;
+            return sum + price;
+        }, 0);
+        
+        // Обновление DOM элементов
+        document.getElementById('last-updated').innerHTML = 
+            `<i class="bi bi-clock"></i> Обновлено: ${new Date().toLocaleTimeString()}`;
+        
+        document.querySelector('#stats-container .col-md-3:nth-child(1) h3').textContent = totalSales.toLocaleString();
+        document.querySelector('#stats-container .col-md-3:nth-child(2) h3').textContent = `€${avgPrice.toFixed(2)}`;
+        document.querySelector('#stats-container .col-md-3:nth-child(3) h3').textContent = activeCoins;
+        document.querySelector('#stats-container .col-md-3:nth-child(4) h3').textContent = `€${totalTurnover.toLocaleString('de-DE', {minimumFractionDigits: 0})}`;
+    }
+    
+    // Рендер сетки монет
+    function renderCoinsGrid() {
+        const container = document.getElementById('coins-grid');
+        const noResults = document.getElementById('no-results');
+        
+        // Фильтрация
+        let filteredCoins = filterCoins(allCoins);
+        
+        if (filteredCoins.length === 0) {
+            container.style.display = 'none';
+            noResults.style.display = 'block';
+            return;
         }
         
-        function setViewMode(mode) {
-            currentViewMode = mode;
-            // Здесь будет логика переключения между сеткой и списком
-        }
+        container.style.display = 'flex';
+        noResults.style.display = 'none';
         
-        function toggleSalesTable() {
-            const table = document.getElementById('recent-sales');
-            table.style.display = table.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        // Настройка слушателей событий
-        function setupEventListeners() {
-            document.getElementById('search-input').addEventListener('input', function(e) {
-                currentFilters.search = e.target.value;
-                renderCoinsGrid();
-            });
+        // Генерация HTML для карточек
+        let html = '';
+        filteredCoins.slice(0, CONFIG.ITEMS_PER_PAGE).forEach(coin => {
+            const coinName = coin.название || coin.название || '';
+            const year = coin.год || '';
+            const theme = coin.тема || 'Без темы';
+            const circulation = coin.тираж || 0;
+            const material = coin.материал || '-';
+            const faceValue = coin['цена нбрб'] || '0';
             
-            document.getElementById('filter-year').addEventListener('change', function(e) {
-                currentFilters.year = e.target.value || null;
-                renderCoinsGrid();
-            });
+            // Расчет роста цены
+            const growth = calculateGrowth(coinName);
             
-            document.getElementById('filter-theme').addEventListener('change', function(e) {
-                currentFilters.theme = e.target.value || null;
-                renderCoinsGrid();
-            });
-            
-            document.getElementById('filter-material').addEventListener('change', function(e) {
-                currentFilters.material = e.target.value || null;
-                renderCoinsGrid();
-            });
-            
-            // Закрытие модального окна по клику вне его
-            document.getElementById('coinModal').addEventListener('click', function(e) {
-                if (e.target === this) closeModal();
-            });
-            
-            // Горячие клавиши
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeModal();
-                if (e.key === 'r' && e.ctrlKey) {
-                    e.preventDefault();
-                    refreshData();
-                }
-            });
-        }
-        
-        // Инициализация графиков
-        function initCharts() {
-            // График продаж по годам
-            const ctx1 = document.getElementById('salesByYearChart').getContext('2d');
-            new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels: ['2007', '2008', '2009', '2010'],
-                    datasets: [{
-                        label: 'Количество продаж',
-                        data: [120, 190, 300, 250],
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } }
-                }
-            });
-            
-            // График динамики цен
-            const ctx2 = document.getElementById('priceTimelineChart').getContext('2d');
-            new Chart(ctx2, {
-                type: 'line',
-                data: {
-                    labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
-                    datasets: [{
-                        label: 'Средняя цена (€)',
-                        data: [40, 42, 45, 43, 47, 50],
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true
-                }
-            });
-        }
-        
-        // Заполнение фильтров данными
-        function populateFilters() {
-            // Собираем уникальные годы
-            const years = [...new Set(allCoins.map(c => c.год))].sort();
-            const yearSelect = document.getElementById('filter-year');
-            years.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            });
-            
-            // Собираем уникальные темы
-            const themes = [...new Set(allCoins.map(c => c.тема).filter(Boolean))].sort();
-            const themeSelect = document.getElementById('filter-theme');
-            themes.forEach(theme => {
-                const option = document.createElement('option');
-                option.value = theme;
-                option.textContent = theme;
-                themeSelect.appendChild(option);
-            });
-            
-            // Собираем уникальные материалы
-            const materials = [...new Set(allCoins.map(c => c.материал).filter(Boolean))].sort();
-            const materialSelect = document.getElementById('filter-material');
-            materials.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material;
-                option.textContent = material;
-                materialSelect.appendChild(option);
-            });
-        }
-        
-        // Обновление таблицы последних продаж
-        function updateRecentSales() {
-            const tbody = document.getElementById('sales-table-body');
-            const recentSales = allSales.slice(-10).reverse(); // Последние 10
-            
-            let html = '';
-            recentSales.forEach(sale => {
-                html += `
-                <tr>
-                    <td>${sale.Дата ? sale.Дата.split(' ')[0] : '-'}</td>
-                    <td title="${sale.Название}">${truncate(sale.Название, 40)}</td>
-                    <td><span class="badge ${sale.тип === 'аукцион' ? 'bg-warning' : 'bg-info'}">${sale.тип || '-'}</span></td>
-                    <td class="fw-bold">€${sale['Цена завершения'] || '0'}</td>
-                    <td class="trend-up">+12%</td>
-                </tr>`;
-            });
-            
-            tbody.innerHTML = html;
-        }
-        
-        // Обновление времени последнего обновления
-        function updateLastUpdated() {
-            const now = new Date();
-            document.getElementById('data-update-time').textContent = 
-                now.toLocaleDateString('ru-RU') + ' ' + now.toLocaleTimeString('ru-RU');
-        }
-        
-        // Генерация HTML для деталей монеты (заглушка)
-        function generateCoinDetailsHTML(coin, sales) {
-            return `
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="text-center">
+            html += `
+            <div class="col-xl-4 col-lg-6 col-md-6">
+                <div class="coin-card">
+                    <div class="coin-image">
                         ${coin.изображение ? 
-                            `<img src="${getImagePreview(coin.изображение)}" class="img-fluid rounded" style="max-height: 250px;">` : 
-                            `<div class="coin-image rounded" style="height: 250px;">
-                                <i class="bi bi-coin fs-1"></i>
-                            </div>`}
+                            `<img src="${getImagePreview(coin.изображение)}" style="width:100%;height:100%;object-fit:cover;">` : 
+                            `<i class="bi bi-coin"></i>`}
                     </div>
-                    
-                    <table class="table table-sm mt-3">
-                        <tr><th>Год:</th><td>${coin.год}</td></tr>
-                        <tr><th>Тема:</th><td>${coin.тема || '-'}</td></tr>
-                        <tr><th>Номинал:</th><td>€${coin['цена НБРБ'] || '0'}</td></tr>
-                        <tr><th>Тираж:</th><td>${formatNumber(coin.тираж)}</td></tr>
-                        <tr><th>Материал:</th><td>${coin.материал || '-'}</td></tr>
-                        <tr><th>Качество:</th><td>${coin.качество || '-'}</td></tr>
-                        <tr><th>Диаметр:</th><td>${coin.диаметр || '-'} мм</td></tr>
-                        <tr><th>Вес:</th><td>${coin.вес || '-'} г</td></tr>
-                    </table>
-                </div>
-                
-                <div class="col-md-8">
-                    <h5>История продаж (${sales.length})</h5>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Дата</th>
-                                    <th>Тип</th>
-                                    <th>Начальная</th>
-                                    <th>Финальная</th>
-                                    <th>Изменение</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${sales.slice(-20).reverse().map(sale => `
-                                <tr>
-                                    <td>${sale.Дата ? sale.Дата.split(' ')[0] : '-'}</td>
-                                    <td><span class="badge ${sale.тип === 'аукцион' ? 'bg-warning' : 'bg-info'}">${sale.тип || '-'}</span></td>
-                                    <td>€${sale['цена ау'] || '0'}</td>
-                                    <td class="fw-bold">€${sale['Цена завершения'] || '0'}</td>
-                                    <td class="trend-up">+15%</td>
-                                </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <h6>Статистика по продажам:</h6>
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded">
-                                    <small class="text-muted">Средняя цена</small>
-                                    <div class="h5 mb-0">€45.60</div>
-                                </div>
+                    <div class="p-3">
+                        <h5 class="mb-1" title="${coinName}">${truncate(coinName, 30)}</h5>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="badge bg-primary">${year}</span>
+                            <span class="badge bg-info">${truncate(theme, 15)}</span>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Тираж: ${formatNumber(circulation)}</small>
+                            <small class="text-muted">Материал: ${truncate(material, 20)}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted d-block">Номинал: €${faceValue}</small>
+                                <div class="${getGrowthClass(growth)} fw-bold">${formatGrowth(growth)}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded">
-                                    <small class="text-muted">Максимальная</small>
-                                    <div class="h5 mb-0">€120.00</div>
-                                </div>
-                            </div>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="showCoinDetails('${coinName.replace(/'/g, "\\'")}')">
+                                Детали
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>`;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // Фильтрация монет
+    function filterCoins(coins) {
+        return coins.filter(coin => {
+            // Фильтр по году
+            if (currentFilters.year && coin.год != currentFilters.year) return false;
+            
+            // Фильтр по теме
+            if (currentFilters.theme && coin.тема !== currentFilters.theme) return false;
+            
+            // Фильтр по материалу
+            if (currentFilters.material && coin.материал !== currentFilters.material) return false;
+            
+            // Поиск по названию
+            if (currentFilters.search) {
+                const searchTerm = currentFilters.search.toLowerCase();
+                const coinName = (coin.название || '').toLowerCase();
+                if (!coinName.includes(searchTerm)) return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    // Расчет роста цены для монеты
+    function calculateGrowth(coinName) {
+        const sales = allSales.filter(s => s.каталог === coinName);
+        if (sales.length === 0) return 0;
+        
+        const coin = allCoins.find(c => c.название === coinName);
+        if (!coin || !coin['цена нбрб']) return 0;
+        
+        const faceValue = parseFloat(coin['цена нбрб'].replace(',', '.'));
+        if (!faceValue || faceValue <= 0) return 0;
+        
+        // Берем последнюю продажу
+        const lastSale = sales[sales.length - 1];
+        const salePrice = parseFloat(lastSale['цена завершения'] || 0);
+        
+        if (salePrice <= 0) return 0;
+        
+        // Расчет процента роста
+        return ((salePrice - faceValue) / faceValue) * 100;
+    }
+    
+    // Получить класс для отображения роста
+    function getGrowthClass(growth) {
+        if (growth > 0) return 'trend-up';
+        if (growth < 0) return 'trend-down';
+        return 'trend-neutral';
+    }
+    
+    // Форматирование роста
+    function formatGrowth(growth) {
+        if (growth === 0) return '0%';
+        const sign = growth > 0 ? '+' : '';
+        return `${sign}${growth.toFixed(1)}%`;
+    }
+    
+    // Показать детали монеты
+    async function showCoinDetails(coinName) {
+        const modal = document.getElementById('coinModal');
+        const title = document.getElementById('coinModalTitle');
+        const body = document.getElementById('coinModalBody');
+        
+        modal.style.display = 'flex';
+        title.textContent = coinName;
+        
+        // Показать спиннер загрузки
+        body.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Загрузка данных...</p>
+            </div>
+        `;
+        
+        try {
+            const coin = allCoins.find(c => c.название === coinName);
+            const sales = allSales.filter(s => s.каталог === coinName);
+            
+            body.innerHTML = generateCoinDetailsHTML(coin, sales);
+        } catch (error) {
+            console.error('Ошибка загрузки деталей:', error);
+            body.innerHTML = `
+                <div class="alert alert-danger">
+                    Не удалось загрузить данные: ${error.message}
+                </div>
+            `;
         }
+    }
+    
+    // Закрыть модальное окно
+    function closeModal() {
+        document.getElementById('coinModal').style.display = 'none';
+    }
+    
+    // Вспомогательные функции
+    function fetchData(params) {
+        return fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?${params}`)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                throw error;
+            });
+    }
+    
+    function showLoading(show) {
+        document.getElementById('loading-coins').style.display = show ? 'block' : 'none';
+        if (show) {
+            document.getElementById('coins-grid').style.display = 'none';
+        }
+    }
+    
+    function showError(message) {
+        // Создаем уведомление
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 end-0 m-3';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `
+            <strong>Ошибка!</strong> ${message}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        // Автоматическое удаление через 5 секунд
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    function truncate(str, maxLength) {
+        if (!str) return '';
+        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+    }
+    
+    function formatNumber(num) {
+        if (!num) return '0';
+        const numValue = typeof num === 'string' ? parseFloat(num.replace(',', '.')) : num;
+        return isNaN(numValue) ? '0' : numValue.toLocaleString('ru-RU');
+    }
+    
+    function getImagePreview(url) {
+        if (!url) return '';
+        
+        // Преобразование Google Drive ссылки в превью
+        if (url.includes('drive.google.com')) {
+            const match = url.match(/\/d\/([^\/]+)/);
+            if (match) {
+                return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+            }
+            
+            // Альтернативный формат ссылки
+            const match2 = url.match(/id=([^&]+)/);
+            if (match2) {
+                return `https://drive.google.com/thumbnail?id=${match2[1]}&sz=w400`;
+            }
+        }
+        return url;
+    }
+    
+    function refreshData() {
+        loadAllData();
+    }
+    
+    function clearFilters() {
+        currentFilters = {};
+        document.getElementById('search-input').value = '';
+        document.getElementById('filter-year').value = '';
+        document.getElementById('filter-theme').value = '';
+        document.getElementById('filter-material').value = '';
+        renderCoinsGrid();
+    }
+    
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        const grid = document.getElementById('coins-grid');
+        if (mode === 'list') {
+            grid.classList.add('row-cols-1');
+            grid.querySelectorAll('.coin-card').forEach(card => {
+                card.style.flexDirection = 'row';
+                card.querySelector('.coin-image').style.width = '150px';
+                card.querySelector('.coin-image').style.height = '150px';
+            });
+        } else {
+            grid.classList.remove('row-cols-1');
+            grid.querySelectorAll('.coin-card').forEach(card => {
+                card.style.flexDirection = 'column';
+                card.querySelector('.coin-image').style.width = '100%';
+                card.querySelector('.coin-image').style.height = '180px';
+            });
+        }
+    }
+    
+    function toggleSalesTable() {
+        const table = document.getElementById('recent-sales');
+        const icon = document.querySelector('#recent-sales + .stats-card .btn i');
+        if (table.style.display === 'none') {
+            table.style.display = 'block';
+            icon.classList.remove('bi-arrows-expand');
+            icon.classList.add('bi-arrows-collapse');
+        } else {
+            table.style.display = 'none';
+            icon.classList.remove('bi-arrows-collapse');
+            icon.classList.add('bi-arrows-expand');
+        }
+    }
+    
+    // Настройка слушателей событий
+    function setupEventListeners() {
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            currentFilters.search = e.target.value;
+            renderCoinsGrid();
+        });
+        
+        document.getElementById('filter-year').addEventListener('change', function(e) {
+            currentFilters.year = e.target.value || null;
+            renderCoinsGrid();
+        });
+        
+        document.getElementById('filter-theme').addEventListener('change', function(e) {
+            currentFilters.theme = e.target.value || null;
+            renderCoinsGrid();
+        });
+        
+        document.getElementById('filter-material').addEventListener('change', function(e) {
+            currentFilters.material = e.target.value || null;
+            renderCoinsGrid();
+        });
+        
+        // Закрытие модального окна по клику вне его
+        document.getElementById('coinModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        // Горячие клавиши
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+            if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                refreshData();
+            }
+        });
+    }
+    
+    // Обновление графиков с реальными данными
+    function updateCharts() {
+        // Группировка продаж по году
+        const salesByYear = {};
+        allSales.forEach(sale => {
+            const year = sale.год;
+            if (year) {
+                if (!salesByYear[year]) {
+                    salesByYear[year] = 0;
+                }
+                salesByYear[year]++;
+            }
+        });
+        
+        const years = Object.keys(salesByYear).sort();
+        const salesCounts = years.map(year => salesByYear[year]);
+        
+        // Обновление графика продаж по годам
+        const chart1 = Chart.getChart('salesByYearChart');
+        if (chart1) {
+            chart1.data.labels = years;
+            chart1.data.datasets[0].data = salesCounts;
+            chart1.update();
+        }
+        
+        // Топ-5 монет по росту цены
+        const coinGrowths = allCoins.map(coin => {
+            const growth = calculateGrowth(coin.название);
+            return {
+                name: coin.название,
+                year: coin.год,
+                growth: growth
+            };
+        }).filter(coin => coin.growth > 0)
+          .sort((a, b) => b.growth - a.growth)
+          .slice(0, 5);
+        
+        // Обновление списка топ-5
+        const topCoinsList = document.getElementById('top-coins-list');
+        if (coinGrowths.length > 0) {
+            let html = '';
+            coinGrowths.forEach(coin => {
+                html += `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                    <div>
+                        <strong>${truncate(coin.name, 20)}</strong>
+                        <div class="small text-muted">${coin.year}</div>
+                    </div>
+                    <span class="price-tag trend-up">${formatGrowth(coin.growth)}</span>
+                </div>`;
+            });
+            topCoinsList.innerHTML = html;
+        }
+    }
+    
+    // Инициализация графиков
+    function initCharts() {
+        // График продаж по годам
+        const ctx1 = document.getElementById('salesByYearChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Количество продаж',
+                    data: [],
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Продаж: ${context.raw}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // График динамики цен (заглушка - будет обновляться позже)
+        const ctx2 = document.getElementById('priceTimelineChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Средняя цена (€)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    }
+    
+    // Заполнение фильтров данными
+    function populateFilters() {
+        // Собираем уникальные годы
+        const years = [...new Set(allCoins.map(c => c.год).filter(Boolean))].sort((a, b) => b - a);
+        const yearSelect = document.getElementById('filter-year');
+        yearSelect.innerHTML = '<option value="">Все годы</option>';
+        years.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        });
+        
+        // Собираем уникальные темы
+        const themes = [...new Set(allCoins.map(c => c.тема).filter(Boolean))].sort();
+        const themeSelect = document.getElementById('filter-theme');
+        themeSelect.innerHTML = '<option value="">Все темы</option>';
+        themes.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme;
+            option.textContent = truncate(theme, 30);
+            themeSelect.appendChild(option);
+        });
+        
+        // Собираем уникальные материалы
+        const materials = [...new Set(allCoins.map(c => c.материал).filter(Boolean))].sort();
+        const materialSelect = document.getElementById('filter-material');
+        materialSelect.innerHTML = '<option value="">Все материалы</option>';
+        materials.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material;
+            option.textContent = truncate(material, 20);
+            materialSelect.appendChild(option);
+        });
+    }
+    
+    // Обновление таблицы последних продаж
+    function updateRecentSales() {
+        const tbody = document.getElementById('sales-table-body');
+        
+        // Сортируем продажи по дате (новые сначала)
+        const sortedSales = [...allSales].sort((a, b) => {
+            const dateA = new Date(a.дата || 0);
+            const dateB = new Date(b.дата || 0);
+            return dateB - dateA;
+        });
+        
+        const recentSales = sortedSales.slice(0, 10);
+        
+        if (recentSales.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        Нет данных о продажах
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        recentSales.forEach(sale => {
+            const date = sale.дата ? sale.дата.split(' ')[0] : '-';
+            const coinName = sale.название || sale.каталог || '-';
+            const saleType = sale.тип || '-';
+            const price = parseFloat(sale['цена завершения']) || 0;
+            const growth = calculateGrowth(sale.каталог);
+            
+            html += `
+            <tr>
+                <td>${date}</td>
+                <td title="${coinName}">${truncate(coinName, 40)}</td>
+                <td><span class="badge ${saleType === 'аукцион' ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
+                <td class="fw-bold">€${price.toFixed(2)}</td>
+                <td class="${getGrowthClass(growth)}">${formatGrowth(growth)}</td>
+            </tr>`;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    // Обновление времени последнего обновления
+    function updateLastUpdated() {
+        const now = new Date();
+        document.getElementById('data-update-time').textContent = 
+            now.toLocaleDateString('ru-RU') + ' ' + now.toLocaleTimeString('ru-RU');
+    }
+    
+    // Генерация HTML для деталей монеты
+    function generateCoinDetailsHTML(coin, sales) {
+        if (!coin) {
+            return '<div class="alert alert-warning">Монета не найдена в каталоге</div>';
+        }
+        
+        const coinName = coin.название || '';
+        const year = coin.год || '';
+        const theme = coin.тема || '-';
+        const faceValue = coin['цена нбрб'] || '0';
+        const circulation = coin.тираж || '0';
+        const material = coin.материал || '-';
+        const quality = coin.качество || '-';
+        const diameter = coin.диаметр || '-';
+        const weight = coin.вес || '-';
+        const releaseDate = coin['дата выпуска'] || '-';
+        const asb = coin.асб || '-';
+        
+        // Статистика по продажам
+        const salePrices = sales.map(s => parseFloat(s['цена завершения'] || 0)).filter(p => p > 0);
+        const avgPrice = salePrices.length > 0 ? 
+            salePrices.reduce((a, b) => a + b, 0) / salePrices.length : 0;
+        const maxPrice = salePrices.length > 0 ? Math.max(...salePrices) : 0;
+        const minPrice = salePrices.length > 0 ? Math.min(...salePrices) : 0;
+        const totalSales = salePrices.length;
+        
+        // Расчет роста цены
+        const growth = calculateGrowth(coinName);
+        
+        return `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="text-center">
+                    ${coin.изображение ? 
+                        `<img src="${getImagePreview(coin.изображение)}" class="img-fluid rounded" style="max-height: 250px; cursor: pointer;" 
+                             onclick="window.open('${coin.изображение}', '_blank')">
+                         <small class="text-muted d-block mt-2">Нажмите для увеличения</small>` : 
+                        `<div class="coin-image rounded" style="height: 250px;">
+                            <i class="bi bi-coin fs-1"></i>
+                        </div>`}
+                </div>
+                
+                <table class="table table-sm mt-3">
+                    <tr><th>Год:</th><td>${year}</td></tr>
+                    <tr><th>Дата выпуска:</th><td>${releaseDate}</td></tr>
+                    <tr><th>Тема:</th><td>${theme}</td></tr>
+                    <tr><th>Номинал (НБРБ):</th><td>€${faceValue}</td></tr>
+                    <tr><th>Тираж:</th><td>${formatNumber(circulation)}</td></tr>
+                    <tr><th>Материал:</th><td>${material}</td></tr>
+                    <tr><th>Качество:</th><td>${quality}</td></tr>
+                    <tr><th>Диаметр:</th><td>${diameter} мм</td></tr>
+                    <tr><th>Вес:</th><td>${weight} г</td></tr>
+                    ${asb ? `<tr><th>АСБ:</th><td>${asb}</td></tr>` : ''}
+                </table>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="mb-4">
+                    <h5>Рост цены</h5>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 ${getGrowthClass(growth)}" style="font-size: 2rem;">
+                            ${formatGrowth(growth)}
+                        </div>
+                        <div>
+                            <div>Номинал: <strong>€${faceValue}</strong></div>
+                            <div>Средняя цена продажи: <strong>€${avgPrice.toFixed(2)}</strong></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h5>История продаж (${totalSales})</h5>
+                ${sales.length > 0 ? `
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Тип</th>
+                                <th>Начальная</th>
+                                <th>Финальная</th>
+                                <th>Ссылка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sales.slice(-20).reverse().map(sale => {
+                                const saleDate = sale.дата ? sale.дата.split(' ')[0] : '-';
+                                const saleType = sale.тип || '-';
+                                const startPrice = parseFloat(sale['цена ау'] || 0).toFixed(2);
+                                const endPrice = parseFloat(sale['цена завершения'] || 0).toFixed(2);
+                                const link = sale.ссылка || '#';
+                                
+                                return `
+                                <tr>
+                                    <td>${saleDate}</td>
+                                    <td><span class="badge ${saleType.includes('аукцион') ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
+                                    <td>€${startPrice}</td>
+                                    <td class="fw-bold">€${endPrice}</td>
+                                    <td>
+                                        ${link !== '#' ? 
+                                            `<a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>` : 
+                                            '-'}
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Статистика по продажам:</h6>
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Всего продаж</small>
+                                <div class="h5 mb-0">${totalSales}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Средняя цена</small>
+                                <div class="h5 mb-0">€${avgPrice.toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Максимальная</small>
+                                <div class="h5 mb-0">€${maxPrice.toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Минимальная</small>
+                                <div class="h5 mb-0">€${minPrice.toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Нет данных о продажах этой монеты
+                </div>
+                `}
+            </div>
+        </div>`;
+    }
     </script>
 </body>
 </html>
