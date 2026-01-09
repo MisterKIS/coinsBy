@@ -128,6 +128,40 @@
             font-size: 14px;
             font-weight: bold;
         }
+        /* Добавьте в конец секции <style> */
+.coin-image img {
+    transition: transform 0.3s ease;
+}
+
+.coin-image img:hover {
+    transform: scale(1.05);
+}
+
+#active-filters {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.filter-chip.active {
+    background: #2196F3;
+    color: white;
+}
+
+.filter-chip .close {
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+@media (max-width: 576px) {
+    .coin-card {
+        margin-bottom: 15px;
+    }
+    
+    .stats-card {
+        padding: 15px;
+    }
+}
     </style>
 </head>
 <body>
