@@ -162,6 +162,33 @@
         padding: 15px;
     }
 }
+/* Добавьте в секцию <style> */
+    .compact-card .price-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.compact-card .coin-name {
+    font-size: 0.75rem;
+    line-height: 1.1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.stats-card .border-start {
+    padding-left: 8px;
+}
+
+/* Для высоты карточек */
+.stats-card {
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
     </style>
 </head>
 <body>
@@ -170,7 +197,7 @@
         <header class="mb-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2 mb-1">💰 Аналитика продаж монет НБРБ</h1>
+                    <h1 class="h2 mb-1">💰 Аналитика продаж памятных монет НБРБ</h1>
                     <p class="text-muted mb-0">Динамика цен, статистика продаж и анализ рынка</p>
                 </div>
                 <div class="text-end">
@@ -185,67 +212,83 @@
         </header>
 
         <!-- Статистика вверху -->
-        <div class="row mb-4" id="stats-container">
-            <div class="col-md-3 col-sm-6">
-                <div class="stats-card">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-1">Всего продаж</h6>
-                            <h3 class="mb-0">1,024</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-cart-check fs-2 text-primary"></i>
-                        </div>
-                    </div>
-                    <small class="text-success"><i class="bi bi-arrow-up"></i> +12% за месяц</small>
+<div class="row mb-4" id="stats-container">
+    <div class="col-md-3 col-sm-6">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-muted mb-1">Всего продаж</h6>
+                    <h3 class="mb-0" id="total-sales">-</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="bi bi-cart-check fs-2 text-primary"></i>
                 </div>
             </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stats-card">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-1">Средняя цена</h6>
-                            <h3 class="mb-0">€45.60</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-currency-euro fs-2 text-success"></i>
-                        </div>
-                    </div>
-                    <small class="text-muted">макс: €120.00</small>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stats-card">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-1">Активных позиций</h6>
-                            <h3 class="mb-0">78</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-collection fs-2 text-warning"></i>
-                        </div>
-                    </div>
-                    <small class="text-muted">из 200 в каталоге</small>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stats-card">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-1">Общий оборот</h6>
-                            <h3 class="mb-0">€46,732</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-graph-up fs-2 text-danger"></i>
-                        </div>
-                    </div>
-                    <small class="text-muted">за всё время</small>
-                </div>
-            </div>
+            <small id="sales-growth" class="text-muted">загрузка...</small>
         </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div class="w-100"> <!-- Добавим w-100 для ширины -->
+                    <h6 class="text-muted mb-2">Сделки прошлого месяца</h6>
+                    <div class="row g-1"> <!-- Используем grid для компактности -->
+                        <div class="col-6">
+                            <div class="border-start border-3 border-success ps-2">
+                                <small class="text-muted">Макс</small>
+                                <div class="h5 mb-0 text-success" id="max-deal-price">-</div>
+                                <small class="text-muted d-block" style="font-size: 0.7em; line-height: 1.1;" id="max-deal-name">
+                                    загрузка...
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-start border-3 border-danger ps-2">
+                                <small class="text-muted">Мин</small>
+                                <div class="h5 mb-0 text-danger" id="min-deal-price">-</div>
+                                <small class="text-muted d-block" style="font-size: 0.7em; line-height: 1.1;" id="min-deal-name">
+                                    загрузка...
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <small id="last-month-label" class="text-muted">-</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-muted mb-1">Активных позиций</h6>
+                    <h3 class="mb-0" id="active-coins">-</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="bi bi-collection fs-2 text-warning"></i>
+                </div>
+            </div>
+            <small id="catalog-info" class="text-muted">из - в каталоге</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-muted mb-1">Общий оборот</h6>
+                    <h3 class="mb-0" id="total-turnover">-</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="bi bi-graph-up fs-2 text-danger"></i>
+                </div>
+            </div>
+            <small id="turnover-growth" class="text-muted">за всё время</small>
+        </div>
+    </div>
+</div>
 
         <!-- Фильтры и поиск -->
         <div class="row mb-4">
@@ -458,6 +501,8 @@
     let allSales = [];
     let currentFilters = {};
     let currentViewMode = 'grid';
+    let salesByYearChart = null;
+    let priceTimelineChart = null;
     
     // Инициализация
     document.addEventListener('DOMContentLoaded', function() {
@@ -465,8 +510,14 @@
         setupEventListeners();
         initCharts();
     });
-    
-    // Функция для преобразования данных из Google Sheets в массив объектов
+    	
+	// Добавьте в начало скрипта
+let monthlyStatsCache = {
+    data: null,
+    timestamp: null
+};
+
+    // 2.1 Функция для преобразования данных из Google Sheets в массив объектов
     function parseSheetData(data) {
         if (!data || !data.values || data.values.length < 2) {
             return [];
@@ -487,8 +538,475 @@
             return obj;
         });
     }
+    // 2.2
+    function truncate(str, maxLength) {
+        if (!str) return '';
+        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+    }
+    // 2.3
+    function formatNumber(num) {
+        if (!num) return '0';
+        const numValue = typeof num === 'string' ? parseFloat(num.replace(',', '.')) : num;
+        return isNaN(numValue) ? '0' : numValue.toLocaleString('ru-RU');
+    }
+    // 2.4
+    function getImagePreview(url) {
+        if (!url) return '';
+        
+        // Преобразование Google Drive ссылки в превью
+        if (url.includes('drive.google.com')) {
+            const match = url.match(/\/d\/([^\/]+)/);
+            if (match) {
+                return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+            }
+            
+            // Альтернативный формат ссылки
+            const match2 = url.match(/id=([^&]+)/);
+            if (match2) {
+                return `https://drive.google.com/thumbnail?id=${match2[1]}&sz=w400`;
+            }
+        }
+        return url;
+    }
+
+    // 2.5 Получить класс для отображения роста
+    function getGrowthClass(growth) {
+        if (growth > 0) return 'trend-up';
+        if (growth < 0) return 'trend-down';
+        return 'trend-neutral';
+    }
     
-    // Загрузка всех данных
+    // 2.6 Форматирование роста
+    function formatGrowth(growth) {
+        if (growth === 0) return '0%';
+        const sign = growth > 0 ? '+' : '';
+        return `${sign}${growth.toFixed(1)}%`;
+    }
+    // 2.7
+    function getMonthName(monthOffset = -1) {
+    const months = [
+        'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+        'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'
+    ];
+    
+    const now = new Date();
+    let targetMonth = now.getMonth() + monthOffset;
+    let targetYear = now.getFullYear();
+    
+    // Корректируем если выходим за границы года
+    if (targetMonth < 0) {
+        targetMonth = 11 + targetMonth + 1; // +1 потому что targetMonth отрицательный
+        targetYear--;
+    }
+    
+    return `${months[targetMonth]} ${targetYear}`;
+}
+
+function parseSaleDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    try {
+        // Формат "2025-10-12 21:57"
+        return new Date(dateStr.replace(' ', 'T'));
+    } catch (e) {
+        console.error('Ошибка парсинга даты:', dateStr, e);
+        return null;
+    }
+}
+
+// 2.8 Функция для получения сделок прошлого месяца
+function getLastMonthDeals() {
+    const now = new Date();
+    
+    // Определяем прошлый месяц
+    let lastMonth = now.getMonth() - 1;
+    let lastMonthYear = now.getFullYear();
+    
+    if (lastMonth < 0) {
+        lastMonth = 11;
+        lastMonthYear--;
+    }
+    
+    console.log(`Ищем сделки за: ${lastMonthYear}-${lastMonth + 1}`);
+    
+    // Фильтруем продажи прошлого месяца
+    const lastMonthSales = allSales.filter(sale => {
+        const saleDate = parseSaleDate(sale['дата истекает']);
+        if (!saleDate) return false;
+        
+        const isLastMonth = saleDate.getMonth() === lastMonth && 
+                           saleDate.getFullYear() === lastMonthYear;
+        
+        return isLastMonth;
+    });
+    
+    console.log(`Найдено продаж в прошлом месяце: ${lastMonthSales.length}`);
+    
+    // Если нет продаж за прошлый месяц
+    if (lastMonthSales.length === 0) {
+        return {
+            max: { price: 0, name: 'Нет данных' },
+            min: { price: 0, name: 'Нет данных' }
+        };
+    }
+    
+    // Находим максимальную и минимальную сделку (в рублях)
+    let maxDeal = { price: -Infinity, name: '', sale: null };
+    let minDeal = { price: Infinity, name: '', sale: null };
+    
+    lastMonthSales.forEach(sale => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        
+        if (price > maxDeal.price) {
+            maxDeal = {
+                price: price,
+                name: sale['каталог'] || 'Без названия',
+                sale: sale
+            };
+        }
+        
+        if (price < minDeal.price && price > 0) {
+            minDeal = {
+                price: price,
+                name: sale['каталог'] || 'Без названия',
+                sale: sale
+            };
+        }
+    });
+    
+    // Если minDeal не нашли (все цены 0 или одинаковые), берем самую низкую
+    if (minDeal.price === Infinity) {
+        const sortedByPrice = [...lastMonthSales].sort((a, b) => 
+            (parseFloat(a['цена завершения']) || 0) - (parseFloat(b['цена завершения']) || 0)
+        );
+        
+        if (sortedByPrice.length > 0) {
+            const cheapest = sortedByPrice[0];
+            minDeal = {
+                price: parseFloat(cheapest['цена завершения']) || 0,
+                name: cheapest['каталог'] || 'Без названия',
+                sale: cheapest
+            };
+        }
+    }
+    
+    console.log('Результат:', {
+        max: `${maxDeal.price} руб. - ${maxDeal.name}`,
+        min: `${minDeal.price} руб. - ${minDeal.name}`
+    });
+    
+    return { max: maxDeal, min: minDeal };
+}
+
+// Функция обрезки текста
+function truncate(str, maxLength) {
+    if (!str) return '';
+    return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+}
+	// 3. ФУНКЦИИ РАСЧЁТА (новые функции добавьте сюда)
+    function calculateAveragePriceByYear() {
+    console.log('=== РАСЧЕТ СРЕДНЕЙ ЦЕНЫ ПО ГОДАМ ВЫПУСКА ===');
+    
+    // 1. Сначала получаем год выпуска для каждой проданной монеты
+    const salesWithYear = allSales.map(sale => {
+        // Ищем монету в каталоге по названию
+        const coin = allCoins.find(c => c.каталог === sale.каталог);
+        const releaseYear = coin ? coin.год : sale.год;
+        const price = parseFloat(sale['цена завершения']) || 0;
+        
+        return {
+            year: releaseYear,
+            price: price,
+            name: sale.каталог
+        };
+    }).filter(item => item.year && item.price > 0);
+    
+    console.log(`Обработано продаж: ${salesWithYear.length}`);
+    
+    // 2. Группируем по годам
+    const yearData = {};
+    
+    salesWithYear.forEach(sale => {
+        const year = sale.year.toString();
+        
+        if (!yearData[year]) {
+            yearData[year] = {
+                totalPrice: 0,
+                count: 0,
+                sales: []
+            };
+        }
+        
+        yearData[year].totalPrice += sale.price;
+        yearData[year].count++;
+        yearData[year].sales.push(sale);
+    });
+    
+    // 3. Рассчитываем среднюю цену для каждого года
+    const result = {};
+    
+    Object.keys(yearData).forEach(year => {
+        const data = yearData[year];
+        result[year] = {
+            averagePrice: data.totalPrice / data.count,
+            count: data.count,
+            totalPrice: data.totalPrice
+        };
+        
+        console.log(`${year}: ${data.count} продаж, средняя цена: ${result[year].averagePrice.toFixed(2)} руб.`);
+    });
+    
+    return result;
+}
+// 3.1 Расчет роста цены для монеты
+function calculateGrowth(coinName) {
+        const sales = allSales.filter(s => s.каталог === coinName);
+        if (sales.length === 0) return 0;
+        
+        const coin = allCoins.find(c => c.название === coinName);
+        if (!coin || !coin['цена нбрб']) return 0;
+        
+        const faceValue = parseFloat(coin['цена нбрб'].replace(',', '.'));
+        if (!faceValue || faceValue <= 0) return 0;
+        
+        // Берем последнюю продажу
+        const lastSale = sales[sales.length - 1];
+        const salePrice = parseFloat(lastSale['цена завершения'] || 0);
+        
+        if (salePrice <= 0) return 0;
+        
+        // Расчет процента роста
+        return ((salePrice - faceValue) / faceValue) * 100;
+    }
+
+    
+//3.15 НОВЫЕ ФУНКЦИИ ДЛЯ РАСЧЁТА МЕСЯЧНОЙ СТАТИСТИКИ:
+function calculateMonthlyStats() {
+    const now = new Date();
+    const newMonth = now.getMonth();
+    const newYear = now.getFullYear();
+    
+    // 1.Определяем предыдущий месяц
+    let currentMonth = newMonth - 1; //декабрь
+    let currentYear = newYear;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear = newYear - 1;
+    }
+    console.log('предыдущий месяц - ', currentMonth);
+    console.log('предыдущий год - ', currentYear);
+
+    // ПРЕДЫДУЩИЙ месяц относительно того, который сравниваем
+    let prevMonth = currentMonth - 1; // ноябрь (10)
+    let prevYear = currentYear; // 2025
+    
+    if (prevMonth < 0) {
+        prevMonth = 11; // декабрь
+        prevYear = currentYear - 1; // 2024
+    }
+    console.log('позапредыдущий месяц - ', prevMonth);
+    console.log('позапредыдущий год - ', prevYear);
+    // 2.Функция для фильтрации продаж по месяцу
+    const filterSalesByMonth = (month, year) => {
+        return allSales.filter(sale => {
+            // ИСПРАВЛЕНО: используем "дата истекает" вместо "дата"
+            if (!sale['дата истекает']) return false;
+            const saleDate = new Date(sale['дата истекает']);
+            return saleDate.getMonth() === month && 
+                   saleDate.getFullYear() === year;
+        });
+    };
+    
+    
+    // 3.Считаем продажи за текущий месяц
+    const currentMonthSales = filterSalesByMonth(currentMonth, currentYear);
+    const currentMonthCount = currentMonthSales.length;
+    const currentMonthTotal = currentMonthSales.reduce((sum, sale) => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        return sum + price;
+    }, 0);
+    console.log('currentMonthCount - ', currentMonthCount);
+    console.log('currentMonth - ', currentMonth);
+    console.log('currentYear - ', currentYear);
+    // 4.Считаем продажи за предыдущий месяц
+    const prevMonthSales = filterSalesByMonth(prevMonth, prevYear);
+    const prevMonthCount = prevMonthSales.length;
+    const prevMonthTotal = prevMonthSales.reduce((sum, sale) => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        return sum + price;
+    }, 0);
+    
+    // 5.Рассчитываем процент изменения количества продаж
+    let countGrowth = 0;
+    if (prevMonthCount > 0) {
+        countGrowth = ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
+    } else if (currentMonthCount > 0) {
+        countGrowth = 100; // Если не было продаж в прошлом месяце
+    }
+    
+    // Рассчитываем процент изменения оборота
+    let turnoverGrowth = 0;
+    if (prevMonthTotal > 0) {
+        turnoverGrowth = ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100;
+    } else if (currentMonthTotal > 0) {
+        turnoverGrowth = 100;
+    }
+    
+    return {
+        currentMonthCount,
+        currentMonthTotal,
+        prevMonthCount,
+        prevMonthTotal,
+        countGrowth: Math.round(countGrowth * 10) / 10,
+        turnoverGrowth: Math.round(turnoverGrowth * 10) / 10,
+        prevMonthName: getMonthName(-1) // Используем существующую функцию
+    };
+}
+
+	// 3.2 НОВЫЕ ФУНКЦИИ ДЛЯ РАСЧЁТА МЕСЯЧНОЙ СТАТИСТИКИ:
+function calculateMonthlyGrowth() {
+    if (allSales.length === 0) return 0;
+    
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+    
+    // Определяем предыдущий месяц
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth < 0) {
+        prevMonth = 11;
+        prevYear = currentYear - 1;
+    }
+	
+	// Функция для фильтрации продаж по месяцу и году
+    const filterSalesByMonth = (month, year) => {
+        return allSales.filter(sale => {
+            if (!sale['дата истекает']) return false;
+            const saleDate = new Date(sale['дата истекает']);
+            return saleDate.getMonth() === month && 
+                   saleDate.getFullYear() === year;
+        });
+    };
+    
+    // 3.3 Считаем продажи за текущий месяц
+    const currentMonthSales = filterSalesByMonth(currentMonth, currentYear);
+    const currentMonthCount = currentMonthSales.length;
+    const currentMonthTotal = currentMonthSales.reduce((sum, sale) => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        return sum + price;
+    }, 0);
+    
+    // 3.4 Считаем продажи за предыдущий месяц
+    const prevMonthSales = filterSalesByMonth(prevMonth, prevYear);
+    const prevMonthCount = prevMonthSales.length;
+    const prevMonthTotal = prevMonthSales.reduce((sum, sale) => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        return sum + price;
+    }, 0);
+    
+    // 3.5 Рассчитываем процент изменения количества продаж
+    let countGrowth = 0;
+    if (prevMonthCount > 0) {
+        countGrowth = ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
+    } else if (currentMonthCount > 0) {
+        countGrowth = 100; // Если не было продаж в прошлом месяце
+    }
+    
+    // 3.6 Рассчитываем процент изменения оборота
+    let turnoverGrowth = 0;
+    if (prevMonthTotal > 0) {
+        turnoverGrowth = ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100;
+    } else if (currentMonthTotal > 0) {
+        turnoverGrowth = 100;
+    }
+
+    return {
+        currentMonthCount,
+        currentMonthTotal,
+        prevMonthCount,
+        prevMonthTotal,
+        countGrowth: Math.round(countGrowth * 10) / 10,
+        turnoverGrowth: Math.round(turnoverGrowth * 10) / 10,
+        prevMonthName: getMonthName(-1) // Используем существующую функцию
+    };
+}
+
+//3.3 Функция расчета средней цены по монетам (не по годам)
+function calculateAveragePriceByCoin() {
+    console.log('=== РАСЧЕТ СРЕДНЕЙ ЦЕНЫ ПО МОНЕТАМ ===');
+    
+    if (!allSales || allSales.length === 0) {
+        console.log('Нет данных о продажах');
+        return {};
+    }
+    
+    // Группируем продажи по монетам
+    const coinData = {};
+    
+    allSales.forEach(sale => {
+        const coinName = sale.каталог;
+        const price = parseFloat(sale['цена завершения']) || 0;
+        
+        if (!coinName || price <= 0) return;
+        
+        if (!coinData[coinName]) {
+            coinData[coinName] = {
+                totalPrice: 0,
+                count: 0,
+                prices: [],
+                // Находим год монеты из каталога
+                year: findCoinYear(coinName)
+            };
+        }
+        
+        coinData[coinName].totalPrice += price;
+        coinData[coinName].count++;
+        coinData[coinName].prices.push(price);
+    });
+    
+    // Рассчитываем среднюю цену для каждой монеты
+    const result = {};
+    
+    Object.keys(coinData).forEach(coinName => {
+        const data = coinData[coinName];
+        if (data.count > 0) {
+            result[coinName] = {
+                averagePrice: data.totalPrice / data.count,
+                count: data.count,
+                totalPrice: data.totalPrice,
+                year: data.year,
+                minPrice: Math.min(...data.prices),
+                maxPrice: Math.max(...data.prices)
+            };
+            
+            console.log(`${coinName}: ${data.count} продаж, средняя ${result[coinName].averagePrice.toFixed(2)} руб.`);
+        }
+    });
+    
+    console.log(`Найдено ${Object.keys(result).length} монет с продажами`);
+    return result;
+}
+
+// Вспомогательная функция для поиска года монеты
+function findCoinYear(coinName) {
+    if (!coinName || !allCoins || allCoins.length === 0) return null;
+    
+    // Ищем монету в каталоге
+    const coin = allCoins.find(c => c.название === coinName);
+    if (coin && coin.год) {
+        return coin.год;
+    }
+    
+    // Если не нашли, пробуем извлечь год из названия
+    const yearMatch = coinName.match(/\b(19\d{2}|20\d{2})\b/);
+    if (yearMatch) {
+        return yearMatch[1];
+    }
+    
+    return null;
+}
+    // 4.0  
+    // 4.1  Загрузка всех данных
     async function loadAllData() {
         try {
             showLoading(true);
@@ -522,37 +1040,156 @@
         }
     }
     
-    // Обновление статистики
+    // 4.2 Обновление статистики
+    // Обновленная функция updateStats:
     function updateStats() {
-        const totalSales = allSales.length;
-        const activeCoins = [...new Set(allSales.map(s => s.каталог))].length;
+    // === 1. ОСНОВНЫЕ РАСЧЕТЫ ===
+    const totalSales = allSales.length;
+    const activeCoins = [...new Set(allSales.map(s => s.каталог))].length;
+    const totalCatalogItems = allCoins.length;
+    
+    // Общий оборот в рублях
+    const totalTurnoverRub = allSales.reduce((sum, sale) => {
+        const price = parseFloat(sale['цена завершения']) || 0;
+        return sum + price;
+    }, 0);
+    
+    // === 2. ОБНОВЛЕНИЕ КАРТОЧКИ 1: Всего продаж ===
+    document.getElementById('total-sales').textContent = totalSales.toLocaleString();
+    
+    const monthlyStats = calculateMonthlyStats();
+    const salesGrowthElement = document.getElementById('sales-growth');
+    
+    if (monthlyStats.prevMonthCount > 0 && monthlyStats.countGrowth !== 0) {
+        const icon = monthlyStats.countGrowth > 0 ? 'arrow-up' : 'arrow-down';
+        const color = monthlyStats.countGrowth > 0 ? 'success' : 'danger';
+        const sign = monthlyStats.countGrowth > 0 ? '+' : '-';
         
-        // Расчет средней цены продаж
-        const totalSalesPrice = allSales.reduce((sum, sale) => {
-            const price = parseFloat(sale['цена завершения']) || 0;
-            return sum + price;
-        }, 0);
-        
-        const avgPrice = totalSales > 0 ? totalSalesPrice / totalSales : 0;
-        
-        // Расчет общего оборота
-        const totalTurnover = allSales.reduce((sum, sale) => {
-            const price = parseFloat(sale['цена завершения']) || 0;
-            return sum + price;
-        }, 0);
-        
-        // Обновление DOM элементов
-        document.getElementById('last-updated').innerHTML = 
-            `<i class="bi bi-clock"></i> Обновлено: ${new Date().toLocaleTimeString()}`;
-        
-        document.querySelector('#stats-container .col-md-3:nth-child(1) h3').textContent = totalSales.toLocaleString();
-        document.querySelector('#stats-container .col-md-3:nth-child(2) h3').textContent = `€${avgPrice.toFixed(2)}`;
-        document.querySelector('#stats-container .col-md-3:nth-child(3) h3').textContent = activeCoins;
-        document.querySelector('#stats-container .col-md-3:nth-child(4) h3').textContent = `€${totalTurnover.toLocaleString('de-DE', {minimumFractionDigits: 0})}`;
+        salesGrowthElement.innerHTML = 
+            `<i class="bi bi-${icon}"></i> ${sign}${Math.abs(monthlyStats.countGrowth)}% за ${monthlyStats.prevMonthName}`;
+        salesGrowthElement.className = `text-${color}`;
+    } else {
+        salesGrowthElement.innerHTML = `<i class="bi bi-dash"></i> 0% за ${monthlyStats.prevMonthName}`;
+        salesGrowthElement.className = 'text-muted';
     }
     
-    // Рендер сетки монет
-    function renderCoinsGrid() {
+    // === 3. КАРТОЧКА 2: Сделки прошлого месяца (в рублях) ===
+    const lastMonthDeals = getLastMonthDeals();
+    
+    // Максимальная сделка
+    document.getElementById('max-deal-price').textContent = lastMonthDeals.max.price + ' р.';
+    document.getElementById('max-deal-name').textContent = truncate(lastMonthDeals.max.name, 25) || 'Нет данных';
+    
+    // Минимальная сделка
+    document.getElementById('min-deal-price').textContent = lastMonthDeals.min.price + ' р.';
+    document.getElementById('min-deal-name').textContent = truncate(lastMonthDeals.min.name, 25) || 'Нет данных';
+    
+    // Месяц
+    const now = new Date();
+    const lastMonthIdx = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                       'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    
+    document.getElementById('last-month-label').innerHTML = 
+        `<i class="bi bi-calendar"></i> ${monthNames[lastMonthIdx]} ${lastMonthYear}`;
+    
+    // === 4. КАРТОЧКА 3: Активные позиции ===
+    document.getElementById('active-coins').textContent = activeCoins;
+    document.getElementById('catalog-info').textContent = `из ${totalCatalogItems} в каталоге`;
+    
+    // === 5. КАРТОЧКА 4: Общий оборот (в рублях) ===
+    document.getElementById('total-turnover').textContent = `${Math.round(totalTurnoverRub).toLocaleString('ru-RU')} р.`;
+    
+    // Динамика оборота
+    const turnoverGrowth = calculateTurnoverGrowth();
+    const turnoverGrowthElement = document.getElementById('turnover-growth');
+    
+    if (turnoverGrowth !== 0) {
+        const icon = turnoverGrowth > 0 ? 'arrow-up' : 'arrow-down';
+        const color = turnoverGrowth > 0 ? 'success' : 'danger';
+        const sign = turnoverGrowth > 0 ? '+' : '-';
+        
+        turnoverGrowthElement.innerHTML = 
+            `<i class="bi bi-${icon}"></i> ${sign}${Math.abs(Math.round(turnoverGrowth))}% за ${monthlyStats.prevMonthName}`;
+        turnoverGrowthElement.className = `text-${color}`;
+    } else {
+        turnoverGrowthElement.innerHTML = `<i class="bi bi-dash"></i> 0% за ${monthlyStats.prevMonthName}`;
+        turnoverGrowthElement.className = 'text-muted';
+    }
+    
+    // === 6. ОБНОВЛЕНИЕ ВРЕМЕНИ ===
+    document.getElementById('last-updated').innerHTML = 
+        `<i class="bi bi-clock"></i> Обновлено: ${new Date().toLocaleTimeString()}`;
+}
+
+// Функция расчета роста оборота
+function calculateTurnoverGrowth() {
+    const now = new Date();
+    
+    // Текущий месяц
+    let currentMonth = now.getMonth() - 1;
+    let currentYear = now.getFullYear();
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    
+    // Предыдущий месяц
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth < 0) {
+        prevMonth = 11;
+        prevYear--;
+    }
+    
+    // Оборот за текущий месяц
+    const currentMonthTurnover = allSales.reduce((sum, sale) => {
+        const saleDate = parseSaleDate(sale['дата истекает']);
+        if (!saleDate) return sum;
+        
+        if (saleDate.getMonth() === currentMonth && 
+            saleDate.getFullYear() === currentYear) {
+            return sum + (parseFloat(sale['цена завершения']) || 0);
+        }
+        return sum;
+    }, 0);
+    
+    // Оборот за предыдущий месяц
+    const prevMonthTurnover = allSales.reduce((sum, sale) => {
+        const saleDate = parseSaleDate(sale['дата истекает']);
+        if (!saleDate) return sum;
+        
+        if (saleDate.getMonth() === prevMonth && 
+            saleDate.getFullYear() === prevYear) {
+            return sum + (parseFloat(sale['цена завершения']) || 0);
+        }
+        return sum;
+    }, 0);
+    
+    if (prevMonthTurnover === 0) return 0;
+    
+    return ((currentMonthTurnover - prevMonthTurnover) / prevMonthTurnover) * 100;
+}
+
+// Вспомогательная функция для обновления индикаторов роста
+function updateGrowthElement(element, growth) {
+    const monthName = getMonthName(-1);
+    
+    if (growth > 0) {
+        element.innerHTML = `<i class="bi bi-arrow-up"></i> +${Math.abs(growth)}% за ${monthName}`;
+        element.className = 'text-success';
+    } else if (growth < 0) {
+        element.innerHTML = `<i class="bi bi-arrow-down"></i> -${Math.abs(growth)}% за ${monthName}`;
+        element.className = 'text-danger';
+    } else {
+        element.innerHTML = `<i class="bi bi-dash"></i> 0% за ${monthName}`;
+        element.className = 'text-muted';
+    }
+}
+
+// 4.3 Рендер сетки монет
+function renderCoinsGrid() {
         const container = document.getElementById('coins-grid');
         const noResults = document.getElementById('no-results');
         
@@ -616,6 +1253,126 @@
         
         container.innerHTML = html;
     }
+// 4.4
+function updateGrowthIndicators(stats) {
+    const growthElements = document.querySelectorAll('#stats-container .stats-card small');
+    
+    // Продажи
+    if (stats.countGrowth > 0) {
+        growthElements[0].innerHTML = `<i class="bi bi-arrow-up"></i> +${Math.abs(stats.countGrowth)}% за ${stats.lastMonthName}`;
+        growthElements[0].className = 'text-success';
+    } else if (stats.countGrowth < 0) {
+        growthElements[0].innerHTML = `<i class="bi bi-arrow-down"></i> -${Math.abs(stats.countGrowth)}% за ${stats.lastMonthName}`;
+        growthElements[0].className = 'text-danger';
+    } else {
+        growthElements[0].innerHTML = `<i class="bi bi-dash"></i> 0% за ${stats.lastMonthName}`;
+        growthElements[0].className = 'text-muted';
+    }
+    
+    // Оборот
+    if (stats.turnoverGrowth > 0) {
+        growthElements[3].innerHTML = `<i class="bi bi-arrow-up"></i> +${Math.abs(stats.turnoverGrowth)}% за ${stats.lastMonthName}`;
+        growthElements[3].className = 'text-success';
+    } else if (stats.turnoverGrowth < 0) {
+        growthElements[3].innerHTML = `<i class="bi bi-arrow-down"></i> -${Math.abs(stats.turnoverGrowth)}% за ${stats.lastMonthName}`;
+        growthElements[3].className = 'text-danger';
+    } else {
+        growthElements[3].innerHTML = `<i class="bi bi-dash"></i> 0% за ${stats.lastMonthName}`;
+        growthElements[3].className = 'text-muted';
+    }
+}
+    // 4.5
+    function updateTopCoinsList(averagePriceByYear) {
+    const topCoinsList = document.getElementById('top-coins-list');
+    if (!topCoinsList) return;
+    
+    // Создаем массив для сортировки
+    const yearArray = Object.entries(averagePriceByYear)
+        .map(([year, data]) => ({
+            year: year,
+            averagePrice: data.averagePrice,
+            count: data.count,
+            totalPrice: data.totalPrice
+        }))
+        .filter(item => !isNaN(parseInt(item.year)))
+        .sort((a, b) => b.averagePrice - a.averagePrice)
+        .slice(0, 5);
+    
+    if (yearArray.length === 0) {
+        topCoinsList.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-info-circle"></i>
+                <div>Нет данных для отображения</div>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<h6 class="mb-3">🏆 Топ-5 лет по средней цене</h6>';
+    
+    yearArray.forEach((item, index) => {
+        const medal = ['🥇', '🥈', '🥉', '4.', '5.'][index];
+        html += `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+            <div style="flex: 1;">
+                <div class="d-flex align-items-center">
+                    <span class="me-2">${medal}</span>
+                    <div>
+                        <strong>${item.year} год</strong>
+                        <div class="small text-muted">${item.count} ${item.count === 1 ? 'продажа' : item.count < 5 ? 'продажи' : 'продаж'}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="fw-bold">${Math.round(item.averagePrice).toLocaleString()} ₽</div>
+                <div class="small text-muted">${Math.round(item.totalPrice).toLocaleString()} ₽ всего</div>
+            </div>
+        </div>`;
+    });
+    
+    topCoinsList.innerHTML = html;
+}
+// Дополнительная функция для расчета роста оборота
+function calculateMonthlyTurnoverGrowth() {
+    if (allSales.length === 0) return 0;
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Определяем предыдущий месяц
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth < 0) {
+        prevMonth = 11;
+        prevYear = currentYear - 1;
+    }
+    
+    // Функция для расчета оборота по месяцу
+    const calculateTurnoverByMonth = (month, year) => {
+        const monthSales = allSales.filter(sale => {
+            if (!sale.дата) return false;
+            const saleDate = new Date(sale.дата);
+            return saleDate.getMonth() === month && 
+                   saleDate.getFullYear() === year;
+        });
+        
+        return monthSales.reduce((sum, sale) => {
+            const price = parseFloat(sale['цена завершения']) || 0;
+            return sum + price;
+        }, 0);
+    };
+    
+    const currentTurnover = calculateTurnoverByMonth(currentMonth, currentYear);
+    const prevTurnover = calculateTurnoverByMonth(prevMonth, prevYear);
+    
+    if (prevTurnover === 0) {
+        return currentTurnover > 0 ? 100 : 0;
+    }
+    
+    const growth = ((currentTurnover - prevTurnover) / prevTurnover) * 100;
+    return Math.round(growth * 10) / 10;
+}
     
     // Фильтрация монет
     function filterCoins(coins) {
@@ -638,41 +1395,6 @@
             
             return true;
         });
-    }
-    
-    // Расчет роста цены для монеты
-    function calculateGrowth(coinName) {
-        const sales = allSales.filter(s => s.каталог === coinName);
-        if (sales.length === 0) return 0;
-        
-        const coin = allCoins.find(c => c.название === coinName);
-        if (!coin || !coin['цена нбрб']) return 0;
-        
-        const faceValue = parseFloat(coin['цена нбрб'].replace(',', '.'));
-        if (!faceValue || faceValue <= 0) return 0;
-        
-        // Берем последнюю продажу
-        const lastSale = sales[sales.length - 1];
-        const salePrice = parseFloat(lastSale['цена завершения'] || 0);
-        
-        if (salePrice <= 0) return 0;
-        
-        // Расчет процента роста
-        return ((salePrice - faceValue) / faceValue) * 100;
-    }
-    
-    // Получить класс для отображения роста
-    function getGrowthClass(growth) {
-        if (growth > 0) return 'trend-up';
-        if (growth < 0) return 'trend-down';
-        return 'trend-neutral';
-    }
-    
-    // Форматирование роста
-    function formatGrowth(growth) {
-        if (growth === 0) return '0%';
-        const sign = growth > 0 ? '+' : '';
-        return `${sign}${growth.toFixed(1)}%`;
     }
     
     // Показать детали монеты
@@ -751,35 +1473,7 @@
         }, 5000);
     }
     
-    function truncate(str, maxLength) {
-        if (!str) return '';
-        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
-    }
     
-    function formatNumber(num) {
-        if (!num) return '0';
-        const numValue = typeof num === 'string' ? parseFloat(num.replace(',', '.')) : num;
-        return isNaN(numValue) ? '0' : numValue.toLocaleString('ru-RU');
-    }
-    
-    function getImagePreview(url) {
-        if (!url) return '';
-        
-        // Преобразование Google Drive ссылки в превью
-        if (url.includes('drive.google.com')) {
-            const match = url.match(/\/d\/([^\/]+)/);
-            if (match) {
-                return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
-            }
-            
-            // Альтернативный формат ссылки
-            const match2 = url.match(/id=([^&]+)/);
-            if (match2) {
-                return `https://drive.google.com/thumbnail?id=${match2[1]}&sz=w400`;
-            }
-        }
-        return url;
-    }
     
     function refreshData() {
         loadAllData();
@@ -828,7 +1522,7 @@
         }
     }
     
-    // Настройка слушателей событий
+    // 6 Настройка слушателей событий
     function setupEventListeners() {
         document.getElementById('search-input').addEventListener('input', function(e) {
             currentFilters.search = e.target.value;
@@ -867,30 +1561,58 @@
     
     // Обновление графиков с реальными данными
     function updateCharts() {
+        console.log('=== ОБНОВЛЕНИЕ ГРАФИКОВ ===');
+    
+    // Проверяем, есть ли данные
+    if (!allSales || allSales.length === 0) {
+        console.log('Нет данных для графиков');
+        return;
+    }
         // Группировка продаж по году
-        const salesByYear = {};
-        allSales.forEach(sale => {
-            const year = sale.год;
-            if (year) {
-                if (!salesByYear[year]) {
-                    salesByYear[year] = 0;
-                }
-                salesByYear[year]++;
-            }
-        });
+    // === 1. ГРАФИК: Средняя цена по годам выпуска ===
+    const averagePriceByYear = calculateAveragePriceByYear();
+    if (Object.keys(averagePriceByYear).length === 0) {
+        console.log('Нет данных для расчета средней цены по годам');
+        return;
+    }
+    // Сортируем года по возрастанию
+    const years = Object.keys(averagePriceByYear)
+        .map(year => parseInt(year))
+        .filter(year => !isNaN(year))
+        .sort((a, b) => a - b);
+    
+    const averagePrices = years.map(year => 
+        averagePriceByYear[year.toString()].averagePrice
+    );
+    
+    console.log('Года:', years);
+    console.log('Средние цены:', averagePrices);
         
-        const years = Object.keys(salesByYear).sort();
-        const salesCounts = years.map(year => salesByYear[year]);
+    // 2. Обновляем первый график (с проверкой существования)
+    if (salesByYearChart) {
+        salesByYearChart.data.labels = years;
+        salesByYearChart.data.datasets[0].data = averagePrices;
+        salesByYearChart.data.datasets[0].label = 'Средняя цена (руб.)';
         
-        // Обновление графика продаж по годам
-        const chart1 = Chart.getChart('salesByYearChart');
-        if (chart1) {
-            chart1.data.labels = years;
-            chart1.data.datasets[0].data = salesCounts;
-            chart1.update();
-        }
+        // Обновляем подсказки
+        salesByYearChart.options.plugins.tooltip.callbacks.label = function(context) {
+            const year = years[context.dataIndex];
+            const data = averagePriceByYear[year.toString()];
+            return [
+                `Год: ${year}`,
+                `Средняя цена: ${context.raw.toFixed(2)} руб.`,
+                `Продаж: ${data.count}`,
+                `Общая сумма: ${data.totalPrice.toFixed(2)} руб.`
+            ];
+        };
         
-        // Топ-5 монет по росту цены
+        salesByYearChart.update();
+        console.log('График 1 обновлен');
+    } else {
+        console.error('График salesByYearChart не инициализирован');
+    }
+        
+        // === 3. ТОП-5 ПО РОСТУ ЦЕНЫ (ОСТАВЛЯЕМ) ===
         const coinGrowths = allCoins.map(coin => {
             const growth = calculateGrowth(coin.название);
             return {
@@ -902,73 +1624,293 @@
           .sort((a, b) => b.growth - a.growth)
           .slice(0, 5);
         
-        // Обновление списка топ-5
-        const topCoinsList = document.getElementById('top-coins-list');
-        if (coinGrowths.length > 0) {
+            // Обновление списка топ-5 по росту
+    const topCoinsList = document.getElementById('top-coins-list');
+    if (coinGrowths.length > 0) {
+        let html = '<h6 class="mb-3">🏆 Топ-5 по росту цены</h6>';
+        coinGrowths.forEach((coin, index) => {
+            const medal = ['🥇', '🥈', '🥉', '4.', '5.'][index];
+            html += `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                <div>
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">${medal}</span>
+                        <div>
+                            <strong>${truncate(coin.name, 18)}</strong>
+                            <div class="small text-muted">${coin.year}</div>
+                        </div>
+                    </div>
+                </div>
+                <span class="price-tag trend-up">${formatGrowth(coin.growth)}</span>
+            </div>`;
+        });
+        topCoinsList.innerHTML = html;
+    } else {
+        topCoinsList.innerHTML = `
+            <h6 class="mb-3">🏆 Топ-5 по росту цены</h6>
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-info-circle"></i>
+                <div>Нет данных о росте цен</div>
+            </div>
+        `;
+    }
+
+        // === 4. ТОП-5 МОНЕТ ПО СРЕДНЕЙ ЦЕНЕ (НОВЫЙ РАСЧЕТ) ===
+        const averagePriceByCoin = calculateAveragePriceByCoin();
+
+            // Если есть блок для второго топа, создайте его в HTML или используем существующий
+    let secondTopContainer = document.getElementById('top-coins-by-price');
+    
+    // Если нет контейнера, создаем его после первого топа
+    if (!secondTopContainer) {
+        const container = document.querySelector('.chart-container:has(#top-coins-list)');
+        if (container) {
+            const newSection = document.createElement('div');
+            newSection.className = 'chart-container mt-3';
+            newSection.id = 'top-coins-by-price-container';
+            newSection.innerHTML = `
+                <h5 class="mb-3">💰 Топ-5 монет по средней цене</h5>
+                <div id="top-coins-by-price">
+                    <div class="text-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <div>Загрузка...</div>
+                    </div>
+                </div>
+            `;
+            container.parentNode.insertBefore(newSection, container.nextSibling);
+            secondTopContainer = document.getElementById('top-coins-by-price');
+        }
+    }
+
+    // Отображаем топ-5 по средней цене
+    if (secondTopContainer && Object.keys(averagePriceByCoin).length > 0) {
+        const topCoinsByPrice = Object.entries(averagePriceByCoin)
+            .map(([coinName, data]) => ({
+                name: coinName,
+                averagePrice: data.averagePrice,
+                count: data.count,
+                totalPrice: data.totalPrice,
+                year: data.year
+            }))
+            .sort((a, b) => b.averagePrice - a.averagePrice)
+            .slice(0, 5);
+        
+        if (topCoinsByPrice.length > 0) {
             let html = '';
-            coinGrowths.forEach(coin => {
+            topCoinsByPrice.forEach((coin, index) => {
+                const medal = ['🥇', '🥈', '🥉', '4.', '5.'][index];
                 html += `
                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                    <div>
-                        <strong>${truncate(coin.name, 20)}</strong>
-                        <div class="small text-muted">${coin.year}</div>
+                    <div style="flex: 1;">
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">${medal}</span>
+                            <div>
+                                <strong title="${coin.name}">${truncate(coin.name, 18)}</strong>
+                                <div class="small text-muted">${coin.year || 'Год не указан'}</div>
+                            </div>
+                        </div>
                     </div>
-                    <span class="price-tag trend-up">${formatGrowth(coin.growth)}</span>
+                    <div class="text-end">
+                        <div class="fw-bold">${Math.round(coin.averagePrice).toLocaleString()} руб.</div>
+                        <div class="small text-muted">${coin.count} ${coin.count === 1 ? 'продажа' : coin.count < 5 ? 'продажи' : 'продаж'}</div>
+                    </div>
                 </div>`;
             });
-            topCoinsList.innerHTML = html;
+            secondTopContainer.innerHTML = html;
+        } else {
+            secondTopContainer.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-info-circle"></i>
+                    <div>Нет данных о средней цене</div>
+                </div>
+            `;
         }
     }
     
-    // Инициализация графиков
-    function initCharts() {
-        // График продаж по годам
-        const ctx1 = document.getElementById('salesByYearChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'bar',
+    // === 5. График динамики цен (нижний график) ===
+    updatePriceTimelineChart(averagePriceByYear);
+      /*  // 4. Обновляем топ-5
+        updateTopCoinsList(averagePriceByYear);*/
+    }
+    
+
+    function updatePriceTimelineChart(averagePriceByYear) {
+    if (!averagePriceByYear || Object.keys(averagePriceByYear).length === 0) {
+        return;
+    }
+    
+    // Сортируем года
+    const sortedYears = Object.keys(averagePriceByYear)
+        .map(year => parseInt(year))
+        .filter(year => !isNaN(year))
+        .sort((a, b) => a - b);
+    
+    const prices = sortedYears.map(year => 
+        averagePriceByYear[year.toString()].averagePrice
+    );
+    
+        // Получаем canvas элемент
+        const ctx = document.getElementById('priceTimelineChart');
+    if (!ctx) return;
+
+    // Проверяем существование графика
+    if (!priceTimelineChart) {
+        // Создаем новый график
+        priceTimelineChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
             data: {
-                labels: [],
+                labels: sortedYears,
                 datasets: [{
-                    label: 'Количество продаж',
-                    data: [],
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                    label: 'Средняя цена продажи (руб.)',
+                    data: prices,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
                 }]
             },
             options: {
                 responsive: true,
-                plugins: { 
-                    legend: { display: false },
+                plugins: {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return `Продаж: ${context.raw}`;
+                                const year = sortedYears[context.dataIndex];
+                                const data = averagePriceByYear[year.toString()];
+                                return `Средняя цена: ${context.raw.toFixed(2)} руб. (${data.count} продаж)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Цена (руб.)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Год выпуска'
+                        }
+                    }
+                }
+            }
+        });
+        console.log('График 2 создан');
+    } else {
+        // Обновляем существующий график
+        // Сначала уничтожаем старый график, если есть
+        if (priceTimelineChart) {
+            priceTimelineChart.destroy();
+        }
+        
+        // Создаем новый
+        priceTimelineChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: sortedYears,
+                datasets: [{
+                    label: 'Средняя цена продажи (руб.)',
+                    data: prices,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const year = sortedYears[context.dataIndex];
+                                const data = averagePriceByYear[year.toString()];
+                                return `Средняя цена: ${context.raw.toFixed(2)} руб. (${data.count} продаж)`;
                             }
                         }
                     }
                 }
             }
         });
-        
-        // График динамики цен (заглушка - будет обновляться позже)
-        const ctx2 = document.getElementById('priceTimelineChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'line',
+    }
+}
+
+// Функция расчета тренда для года
+function calculateYearTrend(year, data) {
+    const years = Object.keys(data).map(y => parseInt(y)).sort((a, b) => a - b);
+    const yearIndex = years.indexOf(parseInt(year));
+    
+    if (yearIndex <= 0) return 'первый год данных';
+    
+    const prevYear = years[yearIndex - 1];
+    const currentAvg = data[year.toString()].averagePrice;
+    const prevAvg = data[prevYear.toString()].averagePrice;
+    
+    const change = ((currentAvg - prevAvg) / prevAvg) * 100;
+    
+    if (change > 10) return `↑ +${change.toFixed(1)}% к ${prevYear}`;
+    if (change < -10) return `↓ ${change.toFixed(1)}% к ${prevYear}`;
+    return `≈ ${change.toFixed(1)}% к ${prevYear}`;
+}
+    // 6 Инициализация графиков
+    function initCharts() {
+        console.log('=== ИНИЦИАЛИЗАЦИЯ ГРАФИКОВ ===');
+    
+    // График 1: Средняя цена по годам выпуска
+    const ctx1 = document.getElementById('salesByYearChart');
+    if (ctx1) {
+        salesByYearChart = new Chart(ctx1.getContext('2d'), {
+            type: 'bar',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Средняя цена (€)',
+                    label: 'Средняя цена (руб.)',
                     data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
-                responsive: true
+                responsive: true,
+                plugins: { 
+                    legend: { display: true },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Средняя цена: ${context.raw.toFixed(2)} руб.`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Цена (руб.)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Год выпуска'
+                        }
+                    }
+                }
             }
         });
+        console.log('График 1 инициализирован');
+    } else {
+        console.error('Не найден элемент salesByYearChart');
+    }
     }
     
-    // Заполнение фильтров данными
+    // 6 Заполнение фильтров данными
     function populateFilters() {
         // Собираем уникальные годы
         const years = [...new Set(allCoins.map(c => c.год).filter(Boolean))].sort((a, b) => b - a);
@@ -1003,35 +1945,35 @@
             materialSelect.appendChild(option);
         });
     }
-    
-    // Обновление таблицы последних продаж
+    // 6. ОБРАБОТЧИКИ СОБЫТИЙ И ИНИЦИАЛИЗАЦИЯ
+    // 6.1 Обновление таблицы последних продаж
     function updateRecentSales() {
-        const tbody = document.getElementById('sales-table-body');
-        
-        // Сортируем продажи по дате (новые сначала)
-        const sortedSales = [...allSales].sort((a, b) => {
-            const dateA = new Date(a.дата || 0);
-            const dateB = new Date(b.дата || 0);
-            return dateB - dateA;
-        });
-        
-        const recentSales = sortedSales.slice(0, 10);
-        
-        if (recentSales.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
-                        Нет данных о продажах
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        let html = '';
-        recentSales.forEach(sale => {
-            const date = sale.дата ? sale.дата.split(' ')[0] : '-';
-            const coinName = sale.название || sale.каталог || '-';
+    const tbody = document.getElementById('sales-table-body');
+    
+    // Сортируем продажи по дате истечения (новые сначала)
+    const sortedSales = [...allSales].sort((a, b) => {
+        const dateA = new Date(a['дата истекает'] || 0);
+        const dateB = new Date(b['дата истекает'] || 0);
+        return dateB - dateA;
+    });
+    
+    const recentSales = sortedSales.slice(0, 10);
+    
+    if (recentSales.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    Нет данных о продажах
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    recentSales.forEach(sale => {
+        const date = sale['дата истекает'] ? sale['дата истекает'].split(' ')[0] : '-';
+        const coinName = sale.название || sale.каталог || '-';
             const saleType = sale.тип || '-';
             const price = parseFloat(sale['цена завершения']) || 0;
             const growth = calculateGrowth(sale.каталог);
@@ -1041,13 +1983,13 @@
                 <td>${date}</td>
                 <td title="${coinName}">${truncate(coinName, 40)}</td>
                 <td><span class="badge ${saleType === 'аукцион' ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
-                <td class="fw-bold">€${price.toFixed(2)}</td>
+                <td class="fw-bold">${price.toFixed(2)} руб.</td>
                 <td class="${getGrowthClass(growth)}">${formatGrowth(growth)}</td>
             </tr>`;
         });
         
         tbody.innerHTML = html;
-    }
+}
     
     // Обновление времени последнего обновления
     function updateLastUpdated() {
@@ -1058,14 +2000,15 @@
     
     // Генерация HTML для деталей монеты
     function generateCoinDetailsHTML(coin, sales) {
-        if (!coin) {
+        // 1. Проверка: если монета не найдена, показываем ошибку
+        if (!coin) { 
             return '<div class="alert alert-warning">Монета не найдена в каталоге</div>';
         }
-        
+        // 2. Извлекаем данные из объекта coin (с обработкой отсутствующих значений)
         const coinName = coin.название || '';
         const year = coin.год || '';
         const theme = coin.тема || '-';
-        const faceValue = coin['цена нбрб'] || '0';
+        const faceValue = coin['цена НБРБ'] || '0';
         const circulation = coin.тираж || '0';
         const material = coin.материал || '-';
         const quality = coin.качество || '-';
@@ -1074,7 +2017,7 @@
         const releaseDate = coin['дата выпуска'] || '-';
         const asb = coin.асб || '-';
         
-        // Статистика по продажам
+        // Статистика по продажам // Преобразуем все цены в числа и отфильтровываем нулевые
         const salePrices = sales.map(s => parseFloat(s['цена завершения'] || 0)).filter(p => p > 0);
         const avgPrice = salePrices.length > 0 ? 
             salePrices.reduce((a, b) => a + b, 0) / salePrices.length : 0;
@@ -1084,7 +2027,19 @@
         
         // Расчет роста цены
         const growth = calculateGrowth(coinName);
-        
+        // Сортируем продажи по дате истечения (новые сверху)
+    const sortedSales = [...sales].sort((a, b) => {
+        const dateA = new Date(a['дата истекает'] || 0);
+        const dateB = new Date(b['дата истекает'] || 0);
+        return dateB - dateA; // Сначала новые
+    });
+
+    // Получаем даты первой и последней продажи
+    const firstSaleDate = sortedSales.length > 0 && sortedSales[sortedSales.length - 1]['дата истекает'] ? 
+        sortedSales[sortedSales.length - 1]['дата истекает'].split(' ')[0] : '-';
+    const lastSaleDate = sortedSales.length > 0 && sortedSales[0]['дата истекает'] ? 
+        sortedSales[0]['дата истекает'].split(' ')[0] : '-';
+        // Возвращаем HTML строку с использованием шаблонных литералов
         return `
         <div class="row">
             <div class="col-md-4">
@@ -1102,7 +2057,7 @@
                     <tr><th>Год:</th><td>${year}</td></tr>
                     <tr><th>Дата выпуска:</th><td>${releaseDate}</td></tr>
                     <tr><th>Тема:</th><td>${theme}</td></tr>
-                    <tr><th>Номинал (НБРБ):</th><td>€${faceValue}</td></tr>
+                    <tr><th>Номинал (НБРБ):</th><td>${faceValue} руб.</td></tr>
                     <tr><th>Тираж:</th><td>${formatNumber(circulation)}</td></tr>
                     <tr><th>Материал:</th><td>${material}</td></tr>
                     <tr><th>Качество:</th><td>${quality}</td></tr>
@@ -1122,6 +2077,7 @@
                         <div>
                             <div>Номинал: <strong>€${faceValue}</strong></div>
                             <div>Средняя цена продажи: <strong>€${avgPrice.toFixed(2)}</strong></div>
+                            ${totalSales > 0 ? `<div>Всего продаж: <strong>${totalSales}</strong></div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1132,7 +2088,7 @@
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
-                                <th>Дата</th>
+                                <th>Дата завершения</th>
                                 <th>Тип</th>
                                 <th>Начальная</th>
                                 <th>Финальная</th>
@@ -1140,19 +2096,29 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${sales.slice(-20).reverse().map(sale => {
-                                const saleDate = sale.дата ? sale.дата.split(' ')[0] : '-';
+                            ${sortedSales.slice(0, 20).map(sale => {
+                            // ИСПРАВЛЕНО: используем "дата истекает" вместо "дата"
+                            const saleDate = sale['дата истекает'] ? sale['дата истекает'].split(' ')[0] : '-';
                                 const saleType = sale.тип || '-';
-                                const startPrice = parseFloat(sale['цена ау'] || 0).toFixed(2);
+                                const startPrice = parseFloat(sale['цена ау'] || 0);
                                 const endPrice = parseFloat(sale['цена завершения'] || 0).toFixed(2);
                                 const link = sale.ссылка || '#';
-                                
+                                // Расчет изменения цены для этой конкретной продажи
+                            let saleGrowth = 0;
+                            let growthClass = 'text-muted';
+                            if (faceValue > 0 && endPrice > 0) {
+                                saleGrowth = ((endPrice - parseFloat(faceValue)) / parseFloat(faceValue)) * 100;
+                                growthClass = saleGrowth > 0 ? 'text-success' : saleGrowth < 0 ? 'text-danger' : 'text-muted';
+                            }
                                 return `
                                 <tr>
                                     <td>${saleDate}</td>
                                     <td><span class="badge ${saleType.includes('аукцион') ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
-                                    <td>€${startPrice}</td>
-                                    <td class="fw-bold">€${endPrice}</td>
+                                    <td>${startPrice.toFixed(2)} руб.</td>
+                                    <td class="fw-bold">${endPrice.toFixed(2)} руб.</td>
+                                    <td class="${growthClass}">
+                                    ${saleGrowth > 0 ? '+' : ''}${saleGrowth.toFixed(1)}%
+                                </td>
                                     <td>
                                         ${link !== '#' ? 
                                             `<a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -1194,15 +2160,46 @@
                             </div>
                         </div>
                     </div>
+                
+                    <div class="row mt-2">
+                    <div class="col-md-4 mb-2">
+                        <div class="p-2 bg-light rounded">
+                            <small class="text-muted">Первый раз продана</small>
+                            <div class="h6 mb-0">
+                                ${sortedSales.length > 0 && sortedSales[sortedSales.length - 1]['дата истекает'] ? 
+                                    sortedSales[sortedSales.length - 1]['дата истекает'].split(' ')[0] : 
+                                    '-'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="p-2 bg-light rounded">
+                            <small class="text-muted">Последняя продажа</small>
+                            <div class="h6 mb-0">
+                                ${sortedSales.length > 0 && sortedSales[0]['дата истекает'] ? 
+                                    sortedSales[0]['дата истекает'].split(' ')[0] : 
+                                    '-'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="p-2 bg-light rounded">
+                            <small class="text-muted">Средний рост</small>
+                            <div class="h6 mb-0 ${getGrowthClass(growth)}">
+                                ${formatGrowth(growth)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                ` : `
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> Нет данных о продажах этой монеты
-                </div>
-                `}
             </div>
-        </div>`;
-    }
+            ` : `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Нет данных о продажах этой монеты
+            </div>
+            `}
+        </div>
+    </div>`;
+}
     </script>
 </body>
 </html>
