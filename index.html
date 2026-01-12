@@ -403,7 +403,7 @@
             <!-- Боковая панель с графиками -->
             <div class="col-lg-4">
                 <div class="chart-container">
-                    <h5 class="mb-3">📈 Продажи по годам</h5>
+                    <h6 class="mb-3">📈 Средние цены монет по году выпуска</h6>
                     <canvas id="salesByYearChart" height="200"></canvas>
                 </div>
                 
@@ -1627,7 +1627,7 @@ function calculateMonthlyTurnoverGrowth() {
             // Обновление списка топ-5 по росту
     const topCoinsList = document.getElementById('top-coins-list');
     if (coinGrowths.length > 0) {
-        let html = '<h6 class="mb-3">🏆 Топ-5 по росту цены</h6>';
+        let html = '';
         coinGrowths.forEach((coin, index) => {
             const medal = ['🥇', '🥈', '🥉', '4.', '5.'][index];
             html += `
@@ -1647,7 +1647,6 @@ function calculateMonthlyTurnoverGrowth() {
         topCoinsList.innerHTML = html;
     } else {
         topCoinsList.innerHTML = `
-            <h6 class="mb-3">🏆 Топ-5 по росту цены</h6>
             <div class="text-center text-muted py-3">
                 <i class="bi bi-info-circle"></i>
                 <div>Нет данных о росте цен</div>
@@ -2018,7 +2017,13 @@ function calculateYearTrend(year, data) {
         const asb = coin.асб || '-';
         
         // Статистика по продажам // Преобразуем все цены в числа и отфильтровываем нулевые
-        const salePrices = sales.map(s => parseFloat(s['цена завершения'] || 0)).filter(p => p > 0);
+        const salePrices = sales.map(s => {
+    const price = s['цена завершения'];
+    if (!price) return 0;
+    return typeof price === 'string' ? 
+        parseFloat(price.replace(',', '.')) || 0 : 
+        (typeof price === 'number' ? price : 0);
+}).filter(p => p > 0);
         const avgPrice = salePrices.length > 0 ? 
             salePrices.reduce((a, b) => a + b, 0) / salePrices.length : 0;
         const maxPrice = salePrices.length > 0 ? Math.max(...salePrices) : 0;
@@ -2100,34 +2105,47 @@ function calculateYearTrend(year, data) {
                             // ИСПРАВЛЕНО: используем "дата истекает" вместо "дата"
                             const saleDate = sale['дата истекает'] ? sale['дата истекает'].split(' ')[0] : '-';
                                 const saleType = sale.тип || '-';
-                                const startPrice = parseFloat(sale['цена ау'] || 0);
-                                const endPrice = parseFloat(sale['цена завершения'] || 0).toFixed(2);
-                                const link = sale.ссылка || '#';
+                                const startPriceRaw = sale['цена ау'] || 0;
+    const startPrice = typeof startPriceRaw === 'string' ? 
+        parseFloat(startPriceRaw.replace(',', '.')) || 0 : 
+        (typeof startPriceRaw === 'number' ? startPriceRaw : 0);
+    
+    const endPriceRaw = sale['цена завершения'] || 0;
+    const endPrice = typeof endPriceRaw === 'string' ? 
+        parseFloat(endPriceRaw.replace(',', '.')) || 0 : 
+        (typeof endPriceRaw === 'number' ? endPriceRaw : 0);
+    
+    const link = sale.ссылка || '#';
                                 // Расчет изменения цены для этой конкретной продажи
-                            let saleGrowth = 0;
-                            let growthClass = 'text-muted';
-                            if (faceValue > 0 && endPrice > 0) {
-                                saleGrowth = ((endPrice - parseFloat(faceValue)) / parseFloat(faceValue)) * 100;
-                                growthClass = saleGrowth > 0 ? 'text-success' : saleGrowth < 0 ? 'text-danger' : 'text-muted';
-                            }
-                                return `
-                                <tr>
-                                    <td>${saleDate}</td>
-                                    <td><span class="badge ${saleType.includes('аукцион') ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
-                                    <td>${startPrice.toFixed(2)} руб.</td>
-                                    <td class="fw-bold">${endPrice.toFixed(2)} руб.</td>
-                                    <td class="${growthClass}">
-                                    ${saleGrowth > 0 ? '+' : ''}${saleGrowth.toFixed(1)}%
-                                </td>
-                                    <td>
-                                        ${link !== '#' ? 
-                                            `<a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-box-arrow-up-right"></i>
-                                            </a>` : 
-                                            '-'}
-                                    </td>
-                                </tr>`;
-                            }).join('')}
+                                let saleGrowth = 0;
+    let growthClass = 'text-muted';
+    const faceValueNum = typeof faceValue === 'string' ? 
+        parseFloat(faceValue.replace(',', '.')) || 0 : 
+        (typeof faceValue === 'number' ? faceValue : 0);
+    
+    if (faceValueNum > 0 && endPrice > 0) {
+        saleGrowth = ((endPrice - faceValueNum) / faceValueNum) * 100;
+        growthClass = saleGrowth > 0 ? 'text-success' : saleGrowth < 0 ? 'text-danger' : 'text-muted';
+    }
+    
+    return `
+    <tr>
+        <td>${saleDate}</td>
+        <td><span class="badge ${saleType.includes('аукцион') ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
+        <td>${startPrice.toFixed(2)} руб.</td>
+        <td class="fw-bold">${endPrice.toFixed(2)} руб.</td>
+        <td class="${growthClass}">
+            ${saleGrowth > 0 ? '+' : ''}${saleGrowth.toFixed(1)}%
+        </td>
+        <td>
+            ${link !== '#' ? 
+                `<a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>` : 
+                '-'}
+        </td>
+    </tr>`;
+}).join('')}
                         </tbody>
                     </table>
                 </div>
