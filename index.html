@@ -422,8 +422,25 @@
                 </div>
             </div>
         </div>
+        <!-- Графики цен популярных -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h5 class="mb-3">📈 Динамика цен популярных монет</h5>
+                    <div style="position: relative; height: 400px;">
+                        <canvas id="priceTrendChart"></canvas>
+                    </div>
+                    <div class="mt-2 text-end">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Показаны топ-7 монет по количеству сделок
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        <!-- Графики внизу -->
+        <!-- Графики внизу 
         <div class="row mt-4">
             <div class="col-12">
                 <div class="chart-container">
@@ -431,7 +448,7 @@
                     <canvas id="priceTimelineChart" height="100"></canvas>
                 </div>
             </div>
-        </div>
+        </div>-->
         
         <!-- Таблица последних продаж -->
         <div class="row mt-4">
@@ -751,8 +768,8 @@ function truncate(str, maxLength) {
             count: data.count,
             totalPrice: data.totalPrice
         };
-        
-        console.log(`${year}: ${data.count} продаж, средняя цена: ${result[year].averagePrice.toFixed(2)} руб.`);
+         
+        //console.log(`${year}: ${data.count} продаж, средняя цена: ${result[year].averagePrice.toFixed(2)} руб.`);
     });
     
     return result;
@@ -936,7 +953,6 @@ function calculateAveragePriceByCoin() {
     console.log('=== РАСЧЕТ СРЕДНЕЙ ЦЕНЫ ПО МОНЕТАМ ===');
     
     if (!allSales || allSales.length === 0) {
-        console.log('Нет данных о продажах');
         return {};
     }
     
@@ -952,7 +968,7 @@ function calculateAveragePriceByCoin() {
         if (!coinData[coinName]) {
             coinData[coinName] = {
                 totalPrice: 0,
-                count: 0,
+                count: 0, // ← КОЛИЧЕСТВО ПРОДАЖ ДЛЯ КАЖДОЙ МОНЕТЫ
                 prices: [],
                 // Находим год монеты из каталога
                 year: findCoinYear(coinName)
@@ -960,7 +976,7 @@ function calculateAveragePriceByCoin() {
         }
         
         coinData[coinName].totalPrice += price;
-        coinData[coinName].count++;
+        coinData[coinName].count++; // ← УВЕЛИЧИВАЕТСЯ СЧЁТЧИК
         coinData[coinName].prices.push(price);
     });
     
@@ -979,7 +995,7 @@ function calculateAveragePriceByCoin() {
                 maxPrice: Math.max(...data.prices)
             };
             
-            console.log(`${coinName}: ${data.count} продаж, средняя ${result[coinName].averagePrice.toFixed(2)} руб.`);
+            //console.log(`${coinName}: ${data.count} продаж, средняя ${result[coinName].averagePrice.toFixed(2)} руб.`);
         }
     });
     
@@ -1473,8 +1489,6 @@ function calculateMonthlyTurnoverGrowth() {
         }, 5000);
     }
     
-    
-    
     function refreshData() {
         loadAllData();
     }
@@ -1559,20 +1573,175 @@ function calculateMonthlyTurnoverGrowth() {
         });
     }
     
+    // Добавьте эту функцию ПЕРЕД функцией updateCharts()
+function createPriceTrendChart(topCoins) {
+    if (!topCoins || topCoins.length === 0) {
+        console.log('Нет данных для графика трендов');
+        return;
+    }
+    
+    // Ограничиваем 7 монетами для лучшей читаемости
+    const displayCoins = topCoins.slice(0, 7);
+    
+    // 1. Определяем временной диапазон (последние 12 месяцев)
+    const months = [];
+    const now = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            label: date.toLocaleDateString('ru-RU', { 
+                month: 'short', 
+                year: '2-digit' 
+            }).replace(' г.', '')
+        });
+    }
+    
+    // 2. Собираем данные по месяцам для каждой монеты
+    const datasets = displayCoins.map((coin, index) => {
+        const monthlyData = months.map(month => {
+            // Фильтруем продажи за конкретный месяц
+            const monthSales = allSales.filter(sale => {
+                if (!sale.каталог || sale.каталог !== coin.name) return false;
+                
+                const saleDate = parseSaleDate(sale['дата истекает']);
+                if (!saleDate) return false;
+                
+                return saleDate.getFullYear() === month.year && 
+                       saleDate.getMonth() === month.month;
+            });
+            
+            if (monthSales.length === 0) return null;
+            
+            // Средняя цена за месяц
+            const avgPrice = monthSales.reduce((sum, sale) => {
+                const price = sale['цена завершения'];
+                const priceNum = typeof price === 'string' ? 
+                    parseFloat(price.replace(',', '.')) || 0 : 
+                    (typeof price === 'number' ? price : 0);
+                return sum + priceNum;
+            }, 0) / monthSales.length;
+            
+            return avgPrice;
+        });
+        
+        // Цвета для линий
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+        ];
+        
+        return {
+            label: truncate(coin.name, 25),
+            data: monthlyData,
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length] + '20',
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            fill: false,
+            spanGaps: true,
+            pointBackgroundColor: colors[index % colors.length]
+        };
+    });
+    
+    // 3. Получаем canvas элемент
+    const ctx = document.getElementById('priceTrendChart');
+    if (!ctx) {
+        console.error('Не найден элемент priceTrendChart');
+        return;
+    }
+    
+    // 4. Уничтожаем старый график если существует
+    if (window.priceTrendChartInstance) {
+        window.priceTrendChartInstance.destroy();
+    }
+    
+    // 5. Создаем новый график
+    window.priceTrendChartInstance = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: months.map(m => m.label),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: {
+                            size: 11
+                        },
+                        boxWidth: 12,
+                        padding: 10
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            if (context.raw === null) {
+                                return `${context.dataset.label}: нет данных`;
+                            }
+                            return `${context.dataset.label}: ${context.raw.toFixed(2)} руб.`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Месяц',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Средняя цена (руб.)',
+                        font: {
+                            size: 12
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('ru-RU') + ' ₽';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'nearest'
+            }
+        }
+    });
+}
     // Обновление графиков с реальными данными
     function updateCharts() {
         console.log('=== ОБНОВЛЕНИЕ ГРАФИКОВ ===');
     
     // Проверяем, есть ли данные
     if (!allSales || allSales.length === 0) {
-        console.log('Нет данных для графиков');
         return;
     }
         // Группировка продаж по году
     // === 1. ГРАФИК: Средняя цена по годам выпуска ===
     const averagePriceByYear = calculateAveragePriceByYear();
     if (Object.keys(averagePriceByYear).length === 0) {
-        console.log('Нет данных для расчета средней цены по годам');
         return;
     }
     // Сортируем года по возрастанию
@@ -1585,8 +1754,8 @@ function calculateMonthlyTurnoverGrowth() {
         averagePriceByYear[year.toString()].averagePrice
     );
     
-    console.log('Года:', years);
-    console.log('Средние цены:', averagePrices);
+    //console.log('Года:', years);
+    //console.log('Средние цены:', averagePrices);
         
     // 2. Обновляем первый график (с проверкой существования)
     if (salesByYearChart) {
@@ -1656,6 +1825,25 @@ function calculateMonthlyTurnoverGrowth() {
 
         // === 4. ТОП-5 МОНЕТ ПО СРЕДНЕЙ ЦЕНЕ (НОВЫЙ РАСЧЕТ) ===
         const averagePriceByCoin = calculateAveragePriceByCoin();
+
+            // ДОБАВЬТЕ ЭТОТ КОД - ТОП-10 ПО КОЛИЧЕСТВУ СДЕЛОК
+    const topBySalesCount = Object.entries(averagePriceByCoin)
+        .map(([coinName, data]) => ({
+            name: coinName,
+            count: data.count,
+            averagePrice: data.averagePrice,
+            totalPrice: data.totalPrice,
+            year: data.year
+        }))
+        .sort((a, b) => b.count - a.count)  // сортировка по количеству сделок
+        .slice(0, 10);  // топ-10
+    
+    console.log('=== ТОП-10 монет по количеству сделок ===');
+    topBySalesCount.forEach((coin, index) => {
+        console.log(`${index + 1}. ${coin.name}: ${coin.count} сделок, средняя цена: ${coin.averagePrice.toFixed(2)} руб.`);
+    });
+
+    createPriceTrendChart(topBySalesCount);
 
             // Если есть блок для второго топа, создайте его в HTML или используем существующий
     let secondTopContainer = document.getElementById('top-coins-by-price');
@@ -1727,12 +1915,11 @@ function calculateMonthlyTurnoverGrowth() {
     }
     
     // === 5. График динамики цен (нижний график) ===
-    updatePriceTimelineChart(averagePriceByYear);
+   // updatePriceTimelineChart(averagePriceByYear);
       /*  // 4. Обновляем топ-5
         updateTopCoinsList(averagePriceByYear);*/
     }
-    
-
+/*
     function updatePriceTimelineChart(averagePriceByYear) {
     if (!averagePriceByYear || Object.keys(averagePriceByYear).length === 0) {
         return;
@@ -1837,7 +2024,7 @@ function calculateMonthlyTurnoverGrowth() {
         });
     }
 }
-
+*/
 // Функция расчета тренда для года
 function calculateYearTrend(year, data) {
     const years = Object.keys(data).map(y => parseInt(y)).sort((a, b) => a - b);
