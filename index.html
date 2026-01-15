@@ -500,7 +500,7 @@
     const CONFIG = {
         GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby7oUDCbsb9vxFSnWkyEpyM9ZLb2aJlcC46zSdi7J8SLlTPRG3og2fbGFOy-EA7b_0Q/exec',
         CACHE_DURATION: 5 * 60 * 1000, // 5 минут
-        ITEMS_PER_PAGE: 20
+        ITEMS_PER_PAGE: 15
     };
     
     // Глобальные переменные
@@ -993,7 +993,7 @@ function calculateAveragePriceByCoin() {
     return result;
 }
 
-// Вспомогательная функция для поиска года монеты
+// 3.4 Вспомогательная функция для поиска года монеты
 function findCoinYear(coinName) {
     if (!coinName || !allCoins || allCoins.length === 0) return null;
     
@@ -1011,7 +1011,24 @@ function findCoinYear(coinName) {
     
     return null;
 }
-    // 4.0  
+
+// 3.5 Добавьте эту функцию для получения топ-монет
+function getTopCoinsBySales(count = 12) {
+    if (!allSales || allSales.length === 0) return [];
+    
+    const averagePriceByCoin = calculateAveragePriceByCoin();
+    
+    return Object.entries(averagePriceByCoin)
+        .map(([coinName, data]) => ({
+            name: coinName,
+            count: data.count,
+            averagePrice: data.averagePrice,
+            totalPrice: data.totalPrice,
+            year: data.year
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, count);
+}
     // 4.1  Загрузка всех данных
     async function loadAllData() {
         try {
@@ -1214,7 +1231,7 @@ function renderCoinsGrid() {
         // Генерация HTML для карточек
         let html = '';
         filteredCoins.slice(0, CONFIG.ITEMS_PER_PAGE).forEach(coin => {
-            const coinName = coin.название || coin.название || '';
+            const coinName = coin.название || '';
             const year = coin.год || '';
             const theme = coin.тема || 'Без темы';
             const circulation = coin.тираж || 0;
@@ -1382,16 +1399,25 @@ function calculateMonthlyTurnoverGrowth() {
     
     // Фильтрация монет
     function filterCoins(coins) {
+            // Если нет активных фильтров, показываем популярные монеты
+    const hasActiveFilters = Object.keys(currentFilters).length > 0;
+    
+    if (!hasActiveFilters) {
+        // Режим "популярные": показываем топ по количеству сделок
+        const topCoins = getTopCoinsBySales(9);
+        
+        // Находим полные объекты монет по названиям
+        return topCoins.map(topCoin => {
+            const fullCoin = coins.find(c => c.название === topCoin.name);
+            return fullCoin ? { ...fullCoin, salesCount: topCoin.count } : null;
+        }).filter(Boolean);
+    }
         return coins.filter(coin => {
             // Фильтр по году
             if (currentFilters.year && coin.год != currentFilters.year) return false;
-            
-            // Фильтр по теме
             if (currentFilters.theme && coin.тема !== currentFilters.theme) return false;
-            
             // Фильтр по материалу
             if (currentFilters.material && coin.материал !== currentFilters.material) return false;
-            
             // Поиск по названию
             if (currentFilters.search) {
                 const searchTerm = currentFilters.search.toLowerCase();
@@ -1612,9 +1638,9 @@ function createPriceTrendChart(topCoins) {
         
         // Цвета для линий
         const colors = [
-            '#FF6B6B', '#05f7e6', '#11cffa', '#0af588', '#f7d052',
-            '#f752f7',  '#85c1e9'
-        ]; // красн, морск, сини, зелё, жёлт, фиол, голуб
+            '#FF6B6B', '#05f7e6', '#fc5a03', '#0af588', '#f7d052',
+            '#f752f7',  '#262524'
+        ]; // красн, морск, оранжевый, сини, зелё, жёлт, фиол, чёрн #11cffa
         
         return {
             label: truncate(coin.name, 25),
@@ -1808,19 +1834,9 @@ function createPriceTrendChart(topCoins) {
 
         // === 4. ТОП-5 МОНЕТ ПО СРЕДНЕЙ ЦЕНЕ (НОВЫЙ РАСЧЕТ) ===
         const averagePriceByCoin = calculateAveragePriceByCoin();
+        // ДОБАВЬТЕ ЭТОТ КОД - ТОП-10 ПО КОЛИЧЕСТВУ СДЕЛОК
+        let topBySalesCount = getTopCoinsBySales(7);
 
-            // ДОБАВЬТЕ ЭТОТ КОД - ТОП-10 ПО КОЛИЧЕСТВУ СДЕЛОК
-    const topBySalesCount = Object.entries(averagePriceByCoin)
-        .map(([coinName, data]) => ({
-            name: coinName,
-            count: data.count,
-            averagePrice: data.averagePrice,
-            totalPrice: data.totalPrice,
-            year: data.year
-        }))
-        .sort((a, b) => b.count - a.count)  // сортировка по количеству сделок
-        .slice(0, 7);  // топ-7
-    
     console.log('=== ТОП-7 монет по количеству сделок ===');
     topBySalesCount.forEach((coin, index) => {
         console.log(`${index + 1}. ${coin.name}: ${coin.count} сделок, средняя цена: ${coin.averagePrice.toFixed(2)} руб.`);
