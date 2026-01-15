@@ -440,16 +440,6 @@
             </div>
         </div>
         
-        <!-- Графики внизу 
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="chart-container">
-                    <h5 class="mb-3">📅 Динамика средней цены продаж</h5>
-                    <canvas id="priceTimelineChart" height="100"></canvas>
-                </div>
-            </div>
-        </div>-->
-        
         <!-- Таблица последних продаж -->
         <div class="row mt-4">
             <div class="col-12">
@@ -1238,8 +1228,8 @@ function renderCoinsGrid() {
             <div class="col-xl-4 col-lg-6 col-md-6">
                 <div class="coin-card">
                     <div class="coin-image">
-                        ${coin.изображение ? 
-                            `<img src="${getImagePreview(coin.изображение)}" style="width:100%;height:100%;object-fit:cover;">` : 
+                        ${coin.изображение2 ? 
+                            `<img src="${getImagePreview(coin.изображение2)}" style="width:100%;height:100%;object-fit:cover;">` : 
                             `<i class="bi bi-coin"></i>`}
                     </div>
                     <div class="p-3">
@@ -1575,19 +1565,12 @@ function calculateMonthlyTurnoverGrowth() {
     
     // Добавьте эту функцию ПЕРЕД функцией updateCharts()
 function createPriceTrendChart(topCoins) {
-    if (!topCoins || topCoins.length === 0) {
-        console.log('Нет данных для графика трендов');
-        return;
-    }
-    
-    // Ограничиваем 7 монетами для лучшей читаемости
-    const displayCoins = topCoins.slice(0, 7);
     
     // 1. Определяем временной диапазон (последние 12 месяцев)
     const months = [];
     const now = new Date();
     
-    for (let i = 11; i >= 0; i--) {
+    for (let i = 5; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         months.push({
             year: date.getFullYear(),
@@ -1600,7 +1583,7 @@ function createPriceTrendChart(topCoins) {
     }
     
     // 2. Собираем данные по месяцам для каждой монеты
-    const datasets = displayCoins.map((coin, index) => {
+    const datasets = topCoins.map((coin, index) => {
         const monthlyData = months.map(month => {
             // Фильтруем продажи за конкретный месяц
             const monthSales = allSales.filter(sale => {
@@ -1629,9 +1612,9 @@ function createPriceTrendChart(topCoins) {
         
         // Цвета для линий
         const colors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-        ];
+            '#FF6B6B', '#05f7e6', '#11cffa', '#0af588', '#f7d052',
+            '#f752f7',  '#85c1e9'
+        ]; // красн, морск, сини, зелё, жёлт, фиол, голуб
         
         return {
             label: truncate(coin.name, 25),
@@ -1836,9 +1819,9 @@ function createPriceTrendChart(topCoins) {
             year: data.year
         }))
         .sort((a, b) => b.count - a.count)  // сортировка по количеству сделок
-        .slice(0, 10);  // топ-10
+        .slice(0, 7);  // топ-7
     
-    console.log('=== ТОП-10 монет по количеству сделок ===');
+    console.log('=== ТОП-7 монет по количеству сделок ===');
     topBySalesCount.forEach((coin, index) => {
         console.log(`${index + 1}. ${coin.name}: ${coin.count} сделок, средняя цена: ${coin.averagePrice.toFixed(2)} руб.`);
     });
@@ -1856,7 +1839,7 @@ function createPriceTrendChart(topCoins) {
             newSection.className = 'chart-container mt-3';
             newSection.id = 'top-coins-by-price-container';
             newSection.innerHTML = `
-                <h5 class="mb-3">💰 Топ-5 монет по средней цене</h5>
+                <h5 class="mb-3">💰 Топ-5 дорогих монет</h5>
                 <div id="top-coins-by-price">
                     <div class="text-center text-muted py-3">
                         <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -1919,112 +1902,7 @@ function createPriceTrendChart(topCoins) {
       /*  // 4. Обновляем топ-5
         updateTopCoinsList(averagePriceByYear);*/
     }
-/*
-    function updatePriceTimelineChart(averagePriceByYear) {
-    if (!averagePriceByYear || Object.keys(averagePriceByYear).length === 0) {
-        return;
-    }
-    
-    // Сортируем года
-    const sortedYears = Object.keys(averagePriceByYear)
-        .map(year => parseInt(year))
-        .filter(year => !isNaN(year))
-        .sort((a, b) => a - b);
-    
-    const prices = sortedYears.map(year => 
-        averagePriceByYear[year.toString()].averagePrice
-    );
-    
-        // Получаем canvas элемент
-        const ctx = document.getElementById('priceTimelineChart');
-    if (!ctx) return;
 
-    // Проверяем существование графика
-    if (!priceTimelineChart) {
-        // Создаем новый график
-        priceTimelineChart = new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: sortedYears,
-                datasets: [{
-                    label: 'Средняя цена продажи (руб.)',
-                    data: prices,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const year = sortedYears[context.dataIndex];
-                                const data = averagePriceByYear[year.toString()];
-                                return `Средняя цена: ${context.raw.toFixed(2)} руб. (${data.count} продаж)`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        title: {
-                            display: true,
-                            text: 'Цена (руб.)'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Год выпуска'
-                        }
-                    }
-                }
-            }
-        });
-        console.log('График 2 создан');
-    } else {
-        // Обновляем существующий график
-        // Сначала уничтожаем старый график, если есть
-        if (priceTimelineChart) {
-            priceTimelineChart.destroy();
-        }
-        
-        // Создаем новый
-        priceTimelineChart = new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: sortedYears,
-                datasets: [{
-                    label: 'Средняя цена продажи (руб.)',
-                    data: prices,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const year = sortedYears[context.dataIndex];
-                                const data = averagePriceByYear[year.toString()];
-                                return `Средняя цена: ${context.raw.toFixed(2)} руб. (${data.count} продаж)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-*/
 // Функция расчета тренда для года
 function calculateYearTrend(year, data) {
     const years = Object.keys(data).map(y => parseInt(y)).sort((a, b) => a - b);
