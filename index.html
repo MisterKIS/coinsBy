@@ -767,22 +767,50 @@ function truncate(str, maxLength) {
 // 3.1 Расчет роста цены для монеты
 function calculateGrowth(coinName) {
         const sales = allSales.filter(s => s.каталог === coinName);
-        if (sales.length === 0) return 0;
+        if (sales.length < 2) {
+            console.log(`Монета "${coinName}": менее 2 продаж`);
+            return 0;
+        }
         
         const coin = allCoins.find(c => c.название === coinName);
-        if (!coin || !coin['цена нбрб']) return 0;
+        if (!coin) return 0;
+    
+        // 4. Сортируем продажи по дате
+        const sortedSales = sales.sort((a, b) => {
+            const dateA = parseSaleDate(a['дата истекает']);
+            const dateB = parseSaleDate(b['дата истекает']);
+            return (dateA || 0) - (dateB || 0); // от старых к новым
+        });
         
-        const faceValue = parseFloat(coin['цена нбрб'].replace(',', '.'));
-        if (!faceValue || faceValue <= 0) return 0;
-        
+                // 5. Первая продажа (не путать с выпуском монеты!)
+         const firstSale = sortedSales[0];
+        const firstSaleDate = parseSaleDate(firstSale['дата истекает']);
+        const firstSalePrice = parseFloat(firstSale['цена завершения']);
+
         // Берем последнюю продажу
-        const lastSale = sales[sales.length - 1];
+        const lastSale = sortedSales[sortedSales.length - 1];
         const salePrice = parseFloat(lastSale['цена завершения'] || 0);
+        const lastDate = parseSaleDate(lastSale['дата истекает']);
+        if (!firstSaleDate || !lastDate) return 0;
+        if (salePrice <= 0 || firstSalePrice <= 0) return 0;
         
-        if (salePrice <= 0) return 0;
-        
-        // Расчет процента роста
-        return ((salePrice - faceValue) / faceValue) * 100;
+        // 6. Проверяем, что последняя продажа позже первой
+        if (lastDate <= firstSaleDate) {
+            console.log(`Монета "${coinName}": последняя продажа раньше или равна первой`);
+            return 0;
+        }
+
+    const yearsDiff = (lastDate - firstSaleDate) / (1000 * 60 * 60 * 24 * 365.25);
+    console.log(coinName, ' - yearsDiff - ', yearsDiff, ' firstSaleDate -', firstSaleDate, ' lastDate -', lastDate);
+    console.log(lastSale);
+    if (yearsDiff <= 0) return 0;
+    
+    // 5. CAGR = (Конечная стоимость / Начальная стоимость)^(1/период) - 1
+    const cagr = Math.pow(salePrice / firstSalePrice, 1 / yearsDiff) - 1;
+    
+    // 6. В процентах
+    return Math.round(cagr * 100 * 10) / 10;
+        // Расчет процента роста return ((salePrice - faceValue) / faceValue) * 100;
     }
 
     
