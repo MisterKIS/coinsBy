@@ -801,8 +801,8 @@ function calculateGrowth(coinName) {
         }
 
     const yearsDiff = (lastDate - firstSaleDate) / (1000 * 60 * 60 * 24 * 365.25);
-    console.log(coinName, ' - yearsDiff - ', yearsDiff, ' firstSaleDate -', firstSaleDate, ' lastDate -', lastDate);
-    console.log(lastSale);
+    // console.log(coinName, ' - yearsDiff - ', yearsDiff, ' firstSaleDate -', firstSaleDate, ' lastDate -', lastDate);
+    // console.log(lastSale);
     if (yearsDiff <= 0) return 0;
     
     // 5. CAGR = (Конечная стоимость / Начальная стоимость)^(1/период) - 1
@@ -1263,7 +1263,8 @@ function renderCoinsGrid() {
             const year = coin.год || '';
             const theme = coin.тема || 'Без темы';
             const circulation = coin.тираж || 0;
-            const material = coin.материал || '-';
+            //const material = coin.материал || '-';
+            const releaseDate = coin['дата выпуска'] || '-';
             const faceValue = coin['цена нбрб'] || '0';
             
             // Расчет роста цены
@@ -1285,11 +1286,11 @@ function renderCoinsGrid() {
                         </div>
                         <div class="mb-2">
                             <small class="text-muted d-block">Тираж: ${formatNumber(circulation)}</small>
-                            <small class="text-muted">Материал: ${truncate(material, 20)}</small>
+                            <small class="text-muted">Выпуск: ${releaseDate}</small>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <small class="text-muted d-block">Номинал: €${faceValue}</small>
+                                <small class="text-muted d-block">Цена НБ: ${faceValue} руб.</small>
                                 <div class="${getGrowthClass(growth)} fw-bold">${formatGrowth(growth)}</div>
                             </div>
                             <button class="btn btn-sm btn-outline-primary" 
@@ -2114,16 +2115,15 @@ function calculateYearTrend(year, data) {
         }
         // 2. Извлекаем данные из объекта coin (с обработкой отсутствующих значений)
         const coinName = coin.название || '';
-        const year = coin.год || '';
+        const year = coin.год || '-';
         const theme = coin.тема || '-';
-        const faceValue = coin['цена НБРБ'] || '0';
-        const circulation = coin.тираж || '0';
+        const faceValue = coin['цена нбрб'] || '-';
+        const circulation = coin.тираж || '-';
         const material = coin.материал || '-';
         const quality = coin.качество || '-';
         const diameter = coin.диаметр || '-';
         const weight = coin.вес || '-';
         const releaseDate = coin['дата выпуска'] || '-';
-        const asb = coin.асб || '-';
         
         // Статистика по продажам // Преобразуем все цены в числа и отфильтровываем нулевые
         const salePrices = sales.map(s => {
@@ -2169,15 +2169,15 @@ function calculateYearTrend(year, data) {
                 
                 <table class="table table-sm mt-3">
                     <tr><th>Год:</th><td>${year}</td></tr>
-                    <tr><th>Дата выпуска:</th><td>${releaseDate}</td></tr>
+                    <tr><th>Выпуск:</th><td>${releaseDate}</td></tr>
                     <tr><th>Тема:</th><td>${theme}</td></tr>
-                    <tr><th>Номинал (НБРБ):</th><td>${faceValue} руб.</td></tr>
+                    <tr><th>Цена НБРБ:</th><td>${faceValue} руб</td></tr>
                     <tr><th>Тираж:</th><td>${formatNumber(circulation)}</td></tr>
                     <tr><th>Материал:</th><td>${material}</td></tr>
                     <tr><th>Качество:</th><td>${quality}</td></tr>
                     <tr><th>Диаметр:</th><td>${diameter} мм</td></tr>
                     <tr><th>Вес:</th><td>${weight} г</td></tr>
-                    ${asb ? `<tr><th>АСБ:</th><td>${asb}</td></tr>` : ''}
+                    
                 </table>
             </div>
             
@@ -2189,20 +2189,20 @@ function calculateYearTrend(year, data) {
                             ${formatGrowth(growth)}
                         </div>
                         <div>
-                            <div>Номинал: <strong>€${faceValue}</strong></div>
-                            <div>Средняя цена продажи: <strong>€${avgPrice.toFixed(2)}</strong></div>
-                            ${totalSales > 0 ? `<div>Всего продаж: <strong>${totalSales}</strong></div>` : ''}
+                            <div>Цена НБРБ: <strong>${faceValue} руб</strong></div>
+                            <div>Средняя цена сделки: <strong>${avgPrice.toFixed(2)} руб</strong></div>
+                            ${totalSales > 0 ? `<div>Всего сделок: <strong>${totalSales}</strong></div>` : ''}
                         </div>
                     </div>
                 </div>
                 
-                <h5>История продаж (${totalSales})</h5>
+                <h5>История сделок (${totalSales})</h5>
                 ${sales.length > 0 ? `
                 <div style="max-height: 300px; overflow-y: auto;">
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
-                                <th>Дата завершения</th>
+                                <th>Завершение</th>
                                 <th>Тип</th>
                                 <th>Начальная</th>
                                 <th>Финальная</th>
@@ -2260,30 +2260,30 @@ function calculateYearTrend(year, data) {
                 </div>
                 
                 <div class="mt-4">
-                    <h6>Статистика по продажам:</h6>
+                    <h6>Статистика по сделкам:</h6>
                     <div class="row">
                         <div class="col-md-3 col-6 mb-2">
                             <div class="p-2 bg-light rounded">
-                                <small class="text-muted">Всего продаж</small>
+                                <small class="text-muted">Всего сделок</small>
                                 <div class="h5 mb-0">${totalSales}</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6 mb-2">
                             <div class="p-2 bg-light rounded">
                                 <small class="text-muted">Средняя цена</small>
-                                <div class="h5 mb-0">€${avgPrice.toFixed(2)}</div>
+                                <div class="h5 mb-0">${avgPrice.toFixed(2)} руб</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6 mb-2">
                             <div class="p-2 bg-light rounded">
                                 <small class="text-muted">Максимальная</small>
-                                <div class="h5 mb-0">€${maxPrice.toFixed(2)}</div>
+                                <div class="h5 mb-0">${maxPrice.toFixed(2)} руб</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6 mb-2">
                             <div class="p-2 bg-light rounded">
                                 <small class="text-muted">Минимальная</small>
-                                <div class="h5 mb-0">€${minPrice.toFixed(2)}</div>
+                                <div class="h5 mb-0">${minPrice.toFixed(2)} руб</div>
                             </div>
                         </div>
                     </div>
@@ -2291,7 +2291,7 @@ function calculateYearTrend(year, data) {
                     <div class="row mt-2">
                     <div class="col-md-4 mb-2">
                         <div class="p-2 bg-light rounded">
-                            <small class="text-muted">Первый раз продана</small>
+                            <small class="text-muted">Первая сделка</small>
                             <div class="h6 mb-0">
                                 ${sortedSales.length > 0 && sortedSales[sortedSales.length - 1]['дата истекает'] ? 
                                     sortedSales[sortedSales.length - 1]['дата истекает'].split(' ')[0] : 
@@ -2301,7 +2301,7 @@ function calculateYearTrend(year, data) {
                     </div>
                     <div class="col-md-4 mb-2">
                         <div class="p-2 bg-light rounded">
-                            <small class="text-muted">Последняя продажа</small>
+                            <small class="text-muted">Последняя сделка</small>
                             <div class="h6 mb-0">
                                 ${sortedSales.length > 0 && sortedSales[0]['дата истекает'] ? 
                                     sortedSales[0]['дата истекает'].split(' ')[0] : 
