@@ -767,8 +767,8 @@ function truncate(str, maxLength) {
 // 3.1 Расчет роста цены для монеты
 function calculateGrowth(coinName) {
         const sales = allSales.filter(s => s.каталог === coinName);
-        if (sales.length < 2) {
-            console.log(`Монета "${coinName}": менее 2 продаж`);
+        if (sales.length < 3) {
+            console.log(`Монета "${coinName}": менее 3 продаж`);
             return 0;
         }
         
