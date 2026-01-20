@@ -2182,21 +2182,73 @@ function calculateYearTrend(year, data) {
             </div>
             
             <div class="col-md-8">
-                <div class="mb-4">
-                    <h5>Рост цены</h5>
-                    <div class="d-flex align-items-center">
-                        <div class="me-3 ${getGrowthClass(growth)}" style="font-size: 2rem;">
-                            ${formatGrowth(growth)}
+	      <!-- Заголовок секции роста цены и статистики -->
+    	      <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Рост цены</h5>
+        	    <h6 class="mb-0 text-muted">Статистика по сделкам: всего сделок - ${totalSales}</h6>
+    	      </div>
+	      <!-- Секция с данными, разделенная визуально -->
+    	      <div class="row">
+		   <!-- Левая часть: Рост цены (уменьшено с col-md-4 на col-md-3)-->
+        	   <div class="col-md-3">
+      			<div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                            <div class="${getGrowthClass(growth)}" style="font-size: clamp(1.5rem, 2vw, 2rem); line-height: 1; white-space: nowrap;">
+                                ${formatGrowth(growth)}
+                            </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая часть: Статистика (увеличено с col-md-8 на col-md-9)-->
+        <div class="col-md-9">
+            <div class="row">
+                <div class="col-md-4 col-6 mb-2">
+                    <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Средняя цена</small>
+                                <div class="h5 mb-0">${avgPrice.toFixed(2)} руб</div>
+                            </div>
                         </div>
-                        <div>
-                            <div>Цена НБРБ: <strong>${faceValue} руб</strong></div>
-                            <div>Средняя цена сделки: <strong>${avgPrice.toFixed(2)} руб</strong></div>
-                            ${totalSales > 0 ? `<div>Всего сделок: <strong>${totalSales}</strong></div>` : ''}
+                        <div class="col-md-4 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Минимальная</small>
+                                <div class="h5 mb-0">${minPrice.toFixed(2)} руб</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6 mb-2">
+                            <div class="p-2 bg-light rounded">
+                                <small class="text-muted">Максимальная</small>
+                                <div class="h5 mb-0">${maxPrice.toFixed(2)} руб</div>
+                            </div>
+                        </div>
+                    
+                <!-- Даты сделок -->
+                    <div class="col-md-6 col-12 mb-2">
+                        <div class="p-2 bg-light rounded">
+                            <small class="text-muted">Первая сделка</small>
+                            <div class="h6 mb-0">
+                                ${sortedSales.length > 0 && sortedSales[sortedSales.length - 1]['дата истекает'] ? 
+                                    sortedSales[sortedSales.length - 1]['дата истекает'].split(' ')[0] : 
+                                    '-'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-12 mb-2">
+                        <div class="p-2 bg-light rounded">
+                            <small class="text-muted">Последняя сделка</small>
+                            <div class="h6 mb-0">
+                                ${sortedSales.length > 0 && sortedSales[0]['дата истекает'] ? 
+                                    sortedSales[0]['дата истекает'].split(' ')[0] : 
+                                    '-'}
+                            </div>
                         </div>
                     </div>
                 </div>
+                    </div>
+                </div>
                 
-                <h5>История сделок (${totalSales})</h5>
+                <!-- История сделок -->
+    		<h5 class="mt-4">История сделок (${totalSales})</h5>
                 ${sales.length > 0 ? `
                 <div style="max-height: 300px; overflow-y: auto;">
                     <table class="table table-sm table-striped">
@@ -2206,6 +2258,7 @@ function calculateYearTrend(year, data) {
                                 <th>Тип</th>
                                 <th>Начальная</th>
                                 <th>Финальная</th>
+				<th>Изменение</th>
                                 <th>Ссылка</th>
                             </tr>
                         </thead>
@@ -2260,71 +2313,16 @@ function calculateYearTrend(year, data) {
                 </div>
                 
                 <div class="mt-4">
-                    <h6>Статистика по сделкам:</h6>
-                    <div class="row">
-                        <div class="col-md-3 col-6 mb-2">
-                            <div class="p-2 bg-light rounded">
-                                <small class="text-muted">Всего сделок</small>
-                                <div class="h5 mb-0">${totalSales}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-2">
-                            <div class="p-2 bg-light rounded">
-                                <small class="text-muted">Средняя цена</small>
-                                <div class="h5 mb-0">${avgPrice.toFixed(2)} руб</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-2">
-                            <div class="p-2 bg-light rounded">
-                                <small class="text-muted">Максимальная</small>
-                                <div class="h5 mb-0">${maxPrice.toFixed(2)} руб</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-6 mb-2">
-                            <div class="p-2 bg-light rounded">
-                                <small class="text-muted">Минимальная</small>
-                                <div class="h5 mb-0">${minPrice.toFixed(2)} руб</div>
-                            </div>
-                        </div>
-                    </div>
                 
-                    <div class="row mt-2">
-                    <div class="col-md-4 mb-2">
-                        <div class="p-2 bg-light rounded">
-                            <small class="text-muted">Первая сделка</small>
-                            <div class="h6 mb-0">
-                                ${sortedSales.length > 0 && sortedSales[sortedSales.length - 1]['дата истекает'] ? 
-                                    sortedSales[sortedSales.length - 1]['дата истекает'].split(' ')[0] : 
-                                    '-'}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="p-2 bg-light rounded">
-                            <small class="text-muted">Последняя сделка</small>
-                            <div class="h6 mb-0">
-                                ${sortedSales.length > 0 && sortedSales[0]['дата истекает'] ? 
-                                    sortedSales[0]['дата истекает'].split(' ')[0] : 
-                                    '-'}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="p-2 bg-light rounded">
-                            <small class="text-muted">Средний рост</small>
-                            <div class="h6 mb-0 ${getGrowthClass(growth)}">
-                                ${formatGrowth(growth)}
-                            </div>
-                        </div>
-                    </div>
+                    
+                    
                 </div>
-            </div>
             ` : `
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i> Нет данных о продажах этой монеты
             </div>
             `}
-        </div>
+	</div>
     </div>`;
 }
     </script>
