@@ -506,11 +506,15 @@
     // Глобальные переменные
     let allCoins = [];
     let allSales = [];
+    let buyData = [];
+    let sellData = [];
     let currentFilters = {};
     let currentViewMode = 'grid';
     let salesByYearChart = null;
     let priceTimelineChart = null;
     
+    
+
     // Инициализация
     document.addEventListener('DOMContentLoaded', function() {
         loadAllData();
@@ -768,7 +772,7 @@ function truncate(str, maxLength) {
 function calculateGrowth(coinName) {
         const sales = allSales.filter(s => s.каталог === coinName);
         if (sales.length < 3) {
-            console.log(`Монета "${coinName}": менее 3 продаж`);
+           // console.log(`Монета "${coinName}": менее 3 продаж`);
             return 0;
         }
         
@@ -1063,19 +1067,24 @@ function getTopCoinsBySales(count = 12) {
             showLoading(true);
             
             // Загружаем каталог и продажи параллельно
-            const [catalogData, salesData] = await Promise.all([
-                fetchData('type=catalog'),
-                fetchData('type=sales')
-            ]);
+            // Загружаем все данные параллельно
+        const [catalogData, salesData, buyDataRaw, sellDataRaw] = await Promise.all([
+            fetchData('type=catalog'),
+            fetchData('type=sales'),
+            fetchData('type=buy'),
+            fetchData('type=sell')
+        ]);
             
-            // Парсим данные каталога
-            allCoins = parseSheetData(catalogData);
-            console.log('Загружено монет:', allCoins.length);
+                    // Парсим данные
+        allCoins = parseSheetData(catalogData);
+        allSales = parseSheetData(salesData);
+        buyData = parseSheetData(buyDataRaw);
+        sellData = parseSheetData(sellDataRaw);
             
-            // Парсим данные продаж
-            allSales = parseSheetData(salesData);
-            console.log('Загружено продаж:', allSales.length);
-            
+        console.log('salesData данные:', allSales.length, 'строк');
+        console.log('Buy данные:', buyData.length, 'строк');
+        console.log('Sell данные:', sellData.length, 'строк');
+
             updateStats();
             renderCoinsGrid();
             populateFilters();
@@ -1458,6 +1467,280 @@ function calculateMonthlyTurnoverGrowth() {
         });
     }
     
+    // Вспомогательная функция для получения месячных цен
+    function getMonthlyPrices(data, coinName) {
+    if (!data || data.length === 0) {
+        console.log(`Нет данных для монеты "${coinName}"`);
+        return [];
+    }
+    
+    const prices = [];
+    
+    // 1. Находим все заголовки
+    const headers = Object.keys(data[0] || {});
+    console.log(`Доступные заголовки для "${coinName}":`, headers);
+    
+    // 2. Ищем точное совпадение С УЧЁТОМ РЕГИСТРА
+    // Приводим оба значения к нижнему регистру для сравнения
+    const searchName = coinName.trim().toLowerCase();
+    let priceColumn = headers.find(h => h.trim().toLowerCase() === searchName);
+    
+    const dateColumn = headers.find(h => h.toLowerCase().includes('дата'));
+
+    console.log(`Для монеты "${coinName}" (поиск: "${searchName}"): dateColumn="${dateColumn}", priceColumn="${priceColumn}"`);
+    
+    if (!dateColumn || !priceColumn) {
+        console.warn(`Не найден столбец для монеты "${coinName}" (искали: "${searchName}")`);
+        console.warn(`Доступные заголовки:`, headers);
+        return [];
+    }
+    
+    // 3. Собираем все цены
+    data.forEach(row => {
+        const dateStr = row[dateColumn];
+        const priceStr = row[priceColumn];
+        
+        if (!dateStr || !priceStr) return;
+        
+        // Парсим дату
+        let date;
+        try {
+            if (dateStr.includes('.')) {
+                // Формат DD.MM.YYYY
+                const [day, month, year] = dateStr.split('.');
+                date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            } else if (dateStr.includes('/')) {
+                // Формат MM/DD/YYYY
+                const [month, day, year] = dateStr.split('/');
+                date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            } else {
+                date = new Date(dateStr);
+            }
+        } catch (e) {
+            console.warn(`Ошибка парсинга даты: ${dateStr}`);
+            return;
+        }
+        
+        if (isNaN(date.getTime())) return;
+        
+        // Парсим цену
+        let price = 0;
+        if (priceStr && priceStr !== '-' && priceStr.trim() !== '') {
+            price = typeof priceStr === 'string' ? 
+                parseFloat(priceStr.replace(',', '.')) : 
+                parseFloat(priceStr);
+        }
+        
+        if (!isNaN(price) && price > 0) {
+            prices.push({
+                date: date.toISOString().split('T')[0], // YYYY-MM-DD
+                price: price,
+                rawDate: date,
+                monthLabel: date.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' })
+            });
+        }
+    });
+    
+    console.log(`Найдено ${prices.length} цен для "${coinName}":`, prices);
+    
+    // Сортируем по дате
+    return prices.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+function createDemandSupplyChart(coinName) {
+    console.log(`=== СОЗДАНИЕ ГРАФИКА ДЛЯ "${coinName}" ===`);
+    
+    try {
+        // 1. Проверяем наличие данных
+        if (!buyData || buyData.length === 0 || !sellData || sellData.length === 0) {
+            console.log('Нет buy/sell данных');
+            showNoDataMessage(coinName);
+            return;
+        }
+        
+        // 2. Получаем данные (теперь с учетом регистра)
+        const buyPrices = getMonthlyPrices(buyData, coinName);
+        const sellPrices = getMonthlyPrices(sellData, coinName);
+        
+        console.log(`Результат поиска: buy=${buyPrices.length}, sell=${sellPrices.length}`);
+        
+        // 3. Если нет данных
+        if (buyPrices.length === 0 && sellPrices.length === 0) {
+            showNoDataMessage(coinName);
+            return;
+        }
+        
+        // 4. Подготавливаем данные для Chart.js
+        const allDates = [...new Set([
+            ...buyPrices.map(d => d.date),
+            ...sellPrices.map(d => d.date)
+        ])].sort((a, b) => new Date(a) - new Date(b));
+        
+        console.log('Все даты для графика:', allDates);
+        
+        // 5. Форматируем даты для отображения
+        const formattedDates = allDates.map(dateStr => {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' });
+        });
+        
+        // 6. Подготавливаем datasets
+        const buyDataset = {
+            label: 'Цена покупки (сделки)',
+            data: allDates.map(date => {
+                const point = buyPrices.find(p => p.date === date);
+                return point && point.price > 0 ? point.price : null;
+            }),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            fill: false,
+            spanGaps: true
+        };
+        
+        const sellDataset = {
+            label: 'Цена продажи (предложение)',
+            data: allDates.map(date => {
+                const point = sellPrices.find(p => p.date === date);
+                return point && point.price > 0 ? point.price : null;
+            }),
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            fill: false,
+            spanGaps: true
+        };
+        
+        // 7. Создаем/обновляем график
+        const canvas = document.getElementById('demand-supply-chart');
+        if (!canvas) {
+            console.error('Не найден canvas #demand-supply-chart');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Удаляем старый график если есть
+        if (window.demandSupplyChart) {
+            window.demandSupplyChart.destroy();
+        }
+        
+        window.demandSupplyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: formattedDates,
+                datasets: [buyDataset, sellDataset]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '📈 Динамика спроса и предложения',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.raw === null) {
+                                    return `${context.dataset.label}: нет данных`;
+                                }
+                                return `${context.dataset.label}: ${context.raw} руб.`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Месяц',
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Цена (руб.)',
+                            font: {
+                                size: 12
+                            }
+                        },
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' руб.';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'nearest'
+                }
+            }
+        });
+        
+        console.log(`График для "${coinName}" создан успешно!`);
+        
+    } catch (error) {
+        console.error('Ошибка создания графика:', error);
+        showErrorMessage(error.message);
+    }
+}
+
+// Вспомогательные функции для сообщений
+function showNoDataMessage(coinName) {
+    const chartContainer = document.querySelector('#demand-supply-chart').parentElement;
+    if (chartContainer) {
+        chartContainer.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-graph-up" style="font-size: 3rem;"></i>
+                <p class="mt-3">Нет данных о спросе/предложении для "${coinName}"</p>
+                <small>Данные доступны только для отслеживаемых монет</small>
+            </div>
+        `;
+    }
+}
+
+function showErrorMessage(message) {
+    const chartContainer = document.querySelector('#demand-supply-chart').parentElement;
+    if (chartContainer) {
+        chartContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+                Ошибка загрузки графика: ${message}
+            </div>
+        `;
+    }
+}
+
     // Показать детали монеты
     async function showCoinDetails(coinName) {
         const modal = document.getElementById('coinModal');
@@ -1480,6 +1763,10 @@ function calculateMonthlyTurnoverGrowth() {
             const sales = allSales.filter(s => s.каталог === coinName);
             
             body.innerHTML = generateCoinDetailsHTML(coin, sales);
+            // Создаем график после небольшой задержки
+        setTimeout(() => {
+            createDemandSupplyChart(coinName);
+        }, 300);
         } catch (error) {
             console.error('Ошибка загрузки деталей:', error);
             body.innerHTML = `
@@ -1768,6 +2055,10 @@ function createPriceTrendChart(topCoins) {
         }
     });
 }
+
+
+
+
     // Обновление графиков с реальными данными
     function updateCharts() {
         console.log('=== ОБНОВЛЕНИЕ ГРАФИКОВ ===');
@@ -1868,7 +2159,7 @@ function createPriceTrendChart(topCoins) {
 
     console.log('=== ТОП-7 монет по количеству сделок ===');
     topBySalesCount.forEach((coin, index) => {
-        console.log(`${index + 1}. ${coin.name}: ${coin.count} сделок, средняя цена: ${coin.averagePrice.toFixed(2)} руб.`);
+        //console.log(`${index + 1}. ${coin.name}: ${coin.count} сделок, средняя цена: ${coin.averagePrice.toFixed(2)} руб.`);
     });
 
     createPriceTrendChart(topBySalesCount);
@@ -2258,7 +2549,7 @@ function calculateYearTrend(year, data) {
                                 <th>Тип</th>
                                 <th>Начальная</th>
                                 <th>Финальная</th>
-				<th>Изменение</th>
+				                <th>Изменение</th>
                                 <th>Ссылка</th>
                             </tr>
                         </thead>
@@ -2312,18 +2603,26 @@ function calculateYearTrend(year, data) {
                     </table>
                 </div>
                 
-                <div class="mt-4">
-                
-                    
-                    
+                <!-- ГРАФИК СПРОСА/ПРЕДЛОЖЕНИЯ -->
+            <div class="mt-4">
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="demand-supply-chart"></canvas>
                 </div>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Загрузка графика спроса и предложения...
+                    </small>
+                </div>
+            </div>
             ` : `
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i> Нет данных о продажах этой монеты
             </div>
             `}
-	</div>
-    </div>`;
+        </div>
+    </div>
+    `;
 }
     </script>
 </body>
