@@ -426,7 +426,7 @@
         <div class="row mt-4">
             <div class="col-12">
                 <div class="chart-container">
-                    <h5 class="mb-3">📈 Динамика цен популярных монет</h5>
+                    <h5 class="mb-3">📈 Динамика цен популярных никелевых монет</h5>
                     <div style="position: relative; height: 400px;">
                         <canvas id="priceTrendChart"></canvas>
                     </div>
@@ -1591,8 +1591,8 @@ function createDemandSupplyChart(coinName) {
                 const point = buyPrices.find(p => p.date === date);
                 return point && point.price > 0 ? point.price : null;
             }),
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgb(5, 87, 250)',
+            backgroundColor: 'rgba(5, 87, 250, 0.2)',
             borderWidth: 3,
             tension: 0.3,
             pointRadius: 5,
@@ -1607,10 +1607,9 @@ function createDemandSupplyChart(coinName) {
                 const point = sellPrices.find(p => p.date === date);
                 return point && point.price > 0 ? point.price : null;
             }),
-            borderColor: 'rgb(255, 99, 132)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgb(250, 17, 67)',
+            backgroundColor: 'rgba(250, 17, 67, 0.2)',
             borderWidth: 2,
-            borderDash: [5, 5],
             tension: 0.3,
             pointRadius: 5,
             pointHoverRadius: 8,
@@ -1695,7 +1694,7 @@ function createDemandSupplyChart(coinName) {
                         beginAtZero: false,
                         ticks: {
                             callback: function(value) {
-                                return value + ' руб.';
+                                return value;
                             }
                         }
                     }
@@ -2607,12 +2606,6 @@ function calculateYearTrend(year, data) {
             <div class="mt-4">
                 <div class="chart-container" style="height: 350px;">
                     <canvas id="demand-supply-chart"></canvas>
-                </div>
-                <div class="text-center mt-2">
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i>
-                        Загрузка графика спроса и предложения...
-                    </small>
                 </div>
             </div>
             ` : `
