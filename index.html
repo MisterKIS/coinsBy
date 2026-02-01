@@ -381,7 +381,7 @@
                                         <small class="text-muted d-block">Номинал: €1.06</small>
                                         <div class="trend-up fw-bold">+4,146%</div>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="showCoinDetails('gleb-minsky')">
+                                    <button class="btn btn-sm btn-outline-primary coin-details-btn" data-coin-name="Глеб Минский">
                                         Детали
                                     </button>
                                 </div>
@@ -1248,6 +1248,16 @@ function updateGrowthElement(element, growth) {
     }
 }
 
+function escapeHtmlString(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 // 4.3 Рендер сетки монет
 function renderCoinsGrid() {
         const container = document.getElementById('coins-grid');
@@ -1272,7 +1282,6 @@ function renderCoinsGrid() {
             const year = coin.год || '';
             const theme = coin.тема || 'Без темы';
             const circulation = coin.тираж || 0;
-            //const material = coin.материал || '-';
             const releaseDate = coin['дата выпуска'] || '-';
             const faceValue = coin['цена нбрб'] || '0';
             
@@ -1302,8 +1311,8 @@ function renderCoinsGrid() {
                                 <small class="text-muted d-block">Цена НБ: ${faceValue} руб.</small>
                                 <div class="${getGrowthClass(growth)} fw-bold">${formatGrowth(growth)}</div>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary" 
-                                    onclick="showCoinDetails('${coinName.replace(/'/g, "\\'")}')">
+                            <button class="btn btn-sm btn-outline-primary coin-details-btn"  
+                                data-coin-name="${escapeHtmlString(coinName)}">
                                 Детали
                             </button>
                         </div>
@@ -1313,6 +1322,13 @@ function renderCoinsGrid() {
         });
         
         container.innerHTML = html;
+        // Добавляем обработчики для кнопок
+document.querySelectorAll('.coin-details-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const coinName = this.getAttribute('data-coin-name');
+        showCoinDetails(coinName);
+    });
+});
     }
 // 4.4
 function updateGrowthIndicators(stats) {
