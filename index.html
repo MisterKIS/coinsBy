@@ -448,25 +448,21 @@
             </div>
         </div>
         
-        <!-- Таблица последних продаж -->
+        <!-- Таблица последних выпусков -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="stats-card">
                     <h5 class="mb-3">
-                        <i class="bi bi-clock-history"></i> Последние продажи
-                        <button class="btn btn-sm btn-outline-secondary float-end" onclick="toggleSalesTable()">
-                            <i class="bi bi-arrows-collapse"></i>
-                        </button>
+                        <i class="bi bi-clock-history"></i> Последние выпуски монет
                     </h5>
                     <div id="recent-sales">
                         <table class="table table-hover table-sm">
                             <thead>
                                 <tr>
-                                    <th>Дата</th>
-                                    <th>Монета</th>
-                                    <th>Тип</th>
-                                    <th>Цена</th>
-                                    <th>Изменение</th>
+                                    <th width="120">📅 Дата выпуска</th>
+                                    <th>🪙 Монета</th>
+                                    <th width="150" class="text-center">🏛️ НБРБ</th>
+                                    <th width="150" class="text-center">🏦 АСБ</th>
                                 </tr>
                             </thead>
                             <tbody id="sales-table-body">
@@ -1877,20 +1873,6 @@ function showErrorMessage(message) {
         }
     }
     
-    function toggleSalesTable() {
-        const table = document.getElementById('recent-sales');
-        const icon = document.querySelector('#recent-sales + .stats-card .btn i');
-        if (table.style.display === 'none') {
-            table.style.display = 'block';
-            icon.classList.remove('bi-arrows-expand');
-            icon.classList.add('bi-arrows-collapse');
-        } else {
-            table.style.display = 'none';
-            icon.classList.remove('bi-arrows-collapse');
-            icon.classList.add('bi-arrows-expand');
-        }
-    }
-    
     // 6 Настройка слушателей событий
     function setupEventListeners() {
         document.getElementById('search-input').addEventListener('input', function(e) {
@@ -2369,24 +2351,24 @@ function calculateYearTrend(year, data) {
         });
     }
     // 6. ОБРАБОТЧИКИ СОБЫТИЙ И ИНИЦИАЛИЗАЦИЯ
-    // 6.1 Обновление таблицы последних продаж
+    // 6.1 Обновление таблицы последних выпусков
     function updateRecentSales() {
     const tbody = document.getElementById('sales-table-body');
     
-    // Сортируем продажи по дате истечения (новые сначала)
-    const sortedSales = [...allSales].sort((a, b) => {
-        const dateA = new Date(a['дата истекает'] || 0);
-        const dateB = new Date(b['дата истекает'] || 0);
+    // Сортируем монеты по дате выпуска (новые сначала)
+    const sortedCoins = [...allCoins].sort((a, b) => {
+        const dateA = new Date(a['дата выпуска'] || 0);
+        const dateB = new Date(b['дата выпуска'] || 0);
         return dateB - dateA;
     });
     
-    const recentSales = sortedSales.slice(0, 10);
+    const recentCoins = sortedCoins.slice(0, 10);
     
-    if (recentSales.length === 0) {
+    if (recentCoins.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center text-muted py-4">
-                    Нет данных о продажах
+                <td colspan="4" class="text-center text-muted py-4">
+                    Нет данных о выпусках
                 </td>
             </tr>
         `;
@@ -2394,20 +2376,29 @@ function calculateYearTrend(year, data) {
     }
     
     let html = '';
-    recentSales.forEach(sale => {
-        const date = sale['дата истекает'] ? sale['дата истекает'].split(' ')[0] : '-';
-        const coinName = sale.название || sale.каталог || '-';
-            const saleType = sale.тип || '-';
-            const price = parseFloat(sale['цена завершения']) || 0;
-            const growth = calculateGrowth(sale.каталог);
-            
+    recentCoins.forEach(coin => {
+        const date = coin['дата выпуска'] ? coin['дата выпуска'].split(' ')[0] : '-';
+        const coinName = coin.название;
+        const year = coin.год || '';
+            const nbrb = parseFloat(coin['цена нбрб']) || null;
+            const asb = parseFloat(coin.асб) || null;
+
+  // Исправление ошибки: проверяем на null перед вызовом toFixed
+  const nbrbFormatted = nbrb !== null ? `${nbrb.toFixed(2)} руб.` : '-';
+        const asbFormatted = asb !== null ? `${asb.toFixed(2)} руб.` : '-';
+        
+        // Классы для стилизации
+        const nbrbClass = nbrb !== null ? 'text-primary fw-bold' : 'text-muted';
+        const asbClass = asb !== null ? 'text-warning fw-bold' : 'text-muted';
+
             html += `
             <tr>
                 <td>${date}</td>
-                <td title="${coinName}">${truncate(coinName, 40)}</td>
-                <td><span class="badge ${saleType === 'аукцион' ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
-                <td class="fw-bold">${price.toFixed(2)} руб.</td>
-                <td class="${getGrowthClass(growth)}">${formatGrowth(growth)}</td>
+                <td title="${coinName}">${truncate(coinName, 55)}
+                    ${year ? `<div><small class="text-muted">${year}</small></div>` : ''}
+                    </td>
+                <td class="${nbrbClass} text-center">${nbrbFormatted}</td>
+            <td class="${asbClass} text-center">${asbFormatted}</td>
             </tr>`;
         });
         
