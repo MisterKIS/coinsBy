@@ -2380,16 +2380,32 @@ function calculateYearTrend(year, data) {
         const date = coin['дата выпуска'] ? coin['дата выпуска'].split(' ')[0] : '-';
         const coinName = coin.название;
         const year = coin.год || '';
-            const nbrb = parseFloat(coin['цена нбрб']) || null;
-            const asb = parseFloat(coin.асб) || null;
-
-  // Исправление ошибки: проверяем на null перед вызовом toFixed
-  const nbrbFormatted = nbrb !== null ? `${nbrb.toFixed(2)} руб.` : '-';
-        const asbFormatted = asb !== null ? `${asb.toFixed(2)} руб.` : '-';
+     
+    // Получаем значения доступности (это строки "TRUE"/"FALSE")
+    const nbrbAvailable = (coin.nbrb || '').toString().toUpperCase() === 'TRUE';
+    const asbAvailable = (coin.asb || '').toString().toUpperCase() === 'TRUE';
+    
+    // Получаем цены (если они есть)
+    const priceNBRB = parseFloat(coin['цена нбрб']);
+    const priceASB = parseFloat(coin.асб);
+    
+    // Форматируем отображение цен
+    const nbrbFormatted = nbrbAvailable && !isNaN(priceNBRB) 
+        ? `${priceNBRB.toFixed(2)} руб.` 
+        : 'нет';
+    
+    const asbFormatted = asbAvailable && !isNaN(priceASB) 
+        ? `${priceASB.toFixed(2)} руб.` 
+        : 'нет';
         
-        // Классы для стилизации
-        const nbrbClass = nbrb !== null ? 'text-primary fw-bold' : 'text-muted';
-        const asbClass = asb !== null ? 'text-warning fw-bold' : 'text-muted';
+          // Классы для стилизации
+    const nbrbClass = nbrbAvailable && !isNaN(priceNBRB) 
+        ? 'text-primary fw-bold' 
+        : 'text-muted';
+    
+    const asbClass = asbAvailable && !isNaN(priceASB) 
+        ? 'text-warning fw-bold' 
+        : 'text-muted';
 
             html += `
             <tr>
