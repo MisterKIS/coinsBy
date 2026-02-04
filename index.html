@@ -2575,12 +2575,10 @@ function calculateYearTrend(year, data) {
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
-                                <th>Завершение</th>
+                                <th>Дата</th>
                                 <th>Тип</th>
-                                <th>Начальная</th>
-                                <th>Финальная</th>
-				                <th>Изменение</th>
-                                <th>Ссылка</th>
+                                <th>Цена, руб.</th>
+				<th>Изменение</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2588,17 +2586,12 @@ function calculateYearTrend(year, data) {
                             // ИСПРАВЛЕНО: используем "дата истекает" вместо "дата"
                             const saleDate = sale['дата истекает'] ? sale['дата истекает'].split(' ')[0] : '-';
                                 const saleType = sale.тип || '-';
-                                const startPriceRaw = sale['цена ау'] || 0;
-    const startPrice = typeof startPriceRaw === 'string' ? 
-        parseFloat(startPriceRaw.replace(',', '.')) || 0 : 
-        (typeof startPriceRaw === 'number' ? startPriceRaw : 0);
     
     const endPriceRaw = sale['цена завершения'] || 0;
     const endPrice = typeof endPriceRaw === 'string' ? 
         parseFloat(endPriceRaw.replace(',', '.')) || 0 : 
         (typeof endPriceRaw === 'number' ? endPriceRaw : 0);
     
-    const link = sale.ссылка || '#';
                                 // Расчет изменения цены для этой конкретной продажи
                                 let saleGrowth = 0;
     let growthClass = 'text-muted';
@@ -2615,17 +2608,9 @@ function calculateYearTrend(year, data) {
     <tr>
         <td>${saleDate}</td>
         <td><span class="badge ${saleType.includes('аукцион') ? 'bg-warning' : 'bg-info'}">${saleType}</span></td>
-        <td>${startPrice.toFixed(2)} руб.</td>
-        <td class="fw-bold">${endPrice.toFixed(2)} руб.</td>
+        <td class="fw-bold">${endPrice.toFixed(2)}</td>
         <td class="${growthClass}">
             ${saleGrowth > 0 ? '+' : ''}${saleGrowth.toFixed(1)}%
-        </td>
-        <td>
-            ${link !== '#' ? 
-                `<a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                </a>` : 
-                '-'}
         </td>
     </tr>`;
 }).join('')}
