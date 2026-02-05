@@ -448,31 +448,57 @@
             </div>
         </div>
         
-        <!-- Таблица последних выпусков -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="stats-card">
-                    <h5 class="mb-3">
-                        <i class="bi bi-clock-history"></i> Последние выпуски монет
-                    </h5>
-                    <div id="recent-sales">
-                        <table class="table table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th width="120">📅 Дата выпуска</th>
-                                    <th>🪙 Монета</th>
-                                    <th width="150" class="text-center">🏛️ НБРБ</th>
-                                    <th width="150" class="text-center">🏦 АСБ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sales-table-body">
-                                <!-- Будет заполнено через JS -->
-                            </tbody>
-                        </table>
-                    </div>
+<!-- Таблица последних выпусков монет-->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="stats-card">
+            <h5 class="mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-clock-history"></i> 
+                    <span id="table-title">Последние выпуски монет НБРБ</span>
                 </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="table-toggle">
+                    <label class="form-check-label" for="table-toggle">
+                        <small id="toggle-label">Наличие монет в Беларусбанке</small>
+                    </label>
+                </div>
+            </h5>
+            
+            <!-- Таблица последних выпусков (по умолчанию) -->
+            <div id="recent-sales-table">
+                <table class="table table-hover table-sm">
+                    <thead>
+                        <tr>
+                            <th width="120">📅 Дата</th>
+                            <th>🪙 Монета</th>
+                            <th width="150" class="text-center">🏛️ НБРБ</th>
+                            <th width="150" class="text-center">🏦 АСБ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-table-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- Таблица банковских монет (скрыта) -->
+            <div id="bank-coins-table" style="display: none;">
+                <div class="text-end mb-2">
+                    <small class="text-muted" id="bank-coins-count">Загрузка...</small>
+                </div>
+                <table class="table table-hover table-sm">
+                    <thead>
+                        <tr>
+                            <th>🪙 Название</th>
+                            <th width="120" class="text-center">💰 Цена, BYN</th>
+                            <th width="150" class="text-center">🏢 Кол-во филиалов</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bank-coins-body"></tbody>
+                </table>
             </div>
         </div>
+    </div>
+</div>
         
         <!-- Футер -->
         <footer class="mt-5 mb-4 text-center text-muted">
@@ -512,6 +538,7 @@
     let allSales = [];
     let buyData = [];
     let sellData = [];
+    let bankCoinsData = []; // Новые данные о монетах в банках
     let currentFilters = {};
     let currentViewMode = 'grid';
     let salesByYearChart = null;
@@ -531,6 +558,152 @@ let monthlyStatsCache = {
     data: null,
     timestamp: null
 };
+
+// Настройка переключателя таблиц
+function setupTableToggle() {
+    const toggle = document.getElementById('table-toggle');
+    if (!toggle) return;
+    
+    toggle.addEventListener('change', function() {
+        const recentTable = document.getElementById('recent-sales-table');
+        const bankTable = document.getElementById('bank-coins-table');
+        const title = document.getElementById('table-title');
+        const label = document.getElementById('toggle-label');
+        
+        if (this.checked) {
+            // Показать банковские монеты
+            recentTable.style.display = 'none';
+            bankTable.style.display = 'block';
+            title.textContent = 'Наличие медно-никелевых монет в продаже Беларусбанка';
+            label.textContent = 'Показать последние выпуски монет НБРБ';
+            
+            // Загрузить если еще не загружены
+            if (bankCoinsData.length === 0) {
+                loadBankCoinsData();
+            } else {
+                renderBankCoinsTable();
+            }
+        } else {
+            // Показать последние выпуски
+            recentTable.style.display = 'block';
+            bankTable.style.display = 'none';
+            title.textContent = 'Наличие медно-никелевых монет в продаже Беларусбанка';
+            label.textContent = 'Показать последние выпуски монет НБРБ';
+        }
+    });
+}
+
+// Загрузка данных банковских монет (аналогично другим данным)
+async function loadBankCoinsData() {
+    try {
+        const tbody = document.getElementById('bank-coins-body');
+        const countElement = document.getElementById('bank-coins-count');
+        
+        // Показать загрузку
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Загрузка данных...</span>
+                </td>
+            </tr>
+        `;
+        
+        // Получаем данные через ваш существующий механизм
+        const data = await fetchData('type=bankCoins');
+        bankCoinsData = parseBankCoinsData(data);
+        // Отображаем
+        renderBankCoinsTable();
+        
+    } catch (error) {
+        console.error('Ошибка загрузки банковских монет:', error);
+        const tbody = document.getElementById('bank-coins-body');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center text-danger py-3">
+                    Ошибка: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Парсинг данных банковских монет (аналогично parseSheetData)
+function parseBankCoinsData(data) {
+    if (!data || !data.values || data.values.length < 1) {
+        return [];
+    }
+    
+    // Структура листа sum2: [Дата, Название, Цена, Валюта, Металл, Количество, ID Филиалов]
+    const rows = data.values;
+    
+    // Если есть заголовки - пропускаем первую строку
+    const startRow = rows[0][0] === 'Дата' ? 1 : 0;
+    
+    return rows.slice(startRow).map(row => {
+        return {
+            date: row[0] || '',
+            name: row[1] || '',
+            price: parseFloat(row[2]) || 0,
+            currency: row[3] || 'BYN',
+            metal: row[4] || '',
+            count: parseInt(row[5]) || 0,
+            branches: row[6] || ''
+        };
+    }).filter(coin => coin.name && coin.price > 0); // Фильтруем пустые
+}
+
+// Отображение таблицы банковских монет
+function renderBankCoinsTable() {
+    const tbody = document.getElementById('bank-coins-body');
+    const countElement = document.getElementById('bank-coins-count');
+    
+    if (bankCoinsData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center text-muted py-4">
+                    Нет данных о монетах в продаже
+                </td>
+            </tr>
+        `;
+        countElement.textContent = '0 монет';
+        return;
+    }
+    
+    // Сортируем по количеству филиалов (самые доступные сверху)
+    const sorted = [...bankCoinsData].sort((a, b) => b.count - a.count);
+    
+    let html = '';
+    sorted.forEach(coin => {
+        // Форматируем цену
+        let priceText = coin.price ? coin.price.toFixed(2) : '';
+        
+        // Обрезаем длинное название
+        const shortName = coin.name.length > 70 
+            ? coin.name.substring(0, 67) + '...' 
+            : coin.name;
+        
+        // Цвет для количества филиалов
+        let countClass = 'text-success'; // >10 - зеленый
+        if (coin.count <= 3) countClass = 'text-danger';
+        else if (coin.count <= 10) countClass = 'text-warning';
+        
+        html += `
+            <tr>
+                <td title="${coin.name}">
+                    ${shortName}
+                </td>
+                <td class="text-center fw-bold">${priceText || '—'}</td>
+                <td class="text-center ${countClass} fw-bold" title="${coin.branches}">
+                    ${coin.count}
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    countElement.textContent = `${sorted.length} монет в продаже`;
+}
 
     // 2.1 Функция для преобразования данных из Google Sheets в массив объектов
     function parseSheetData(data) {
@@ -1084,6 +1257,8 @@ function getTopCoinsBySales(count = 12) {
         allSales = parseSheetData(salesData);
         buyData = parseSheetData(buyDataRaw);
         sellData = parseSheetData(sellDataRaw);
+	// Инициализируем переключатель после загрузки основных данных
+        setupTableToggle();
             
         console.log('salesData данные:', allSales.length, 'строк');
         console.log('Buy данные:', buyData.length, 'строк');
