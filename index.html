@@ -28,6 +28,40 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
+
+.price-cell {
+    min-width: 80px;
+}
+
+.price-available {
+    font-weight: bold;
+    color: #198754; /* Зеленый для доступных цен */
+}
+
+.price-unavailable {
+    color: #6c757d; /* Серый для недоступных */
+    opacity: 0.6;
+}
+
+.availability-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.availability-both {
+    background: linear-gradient(45deg, #198754 50%, #0d6efd 50%);
+}
+
+.availability-with-case {
+    background-color: #198754; /* Зеленый */
+}
+
+.availability-without-case {
+    background-color: #0d6efd; /* Синий */
+}
         :root {
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
@@ -497,9 +531,10 @@
                 <table class="table table-hover table-sm">
                     <thead>
                         <tr>
-                            <th>🪙 Название</th>
-                            <th width="120" class="text-center">💰 Цена, BYN</th>
-                            <th width="150" class="text-center">🏢 Кол-во филиалов</th>
+                <th>🪙 Название</th>
+                <th width="120" class="text-center">💰 Без футляра</th>
+                <th width="120" class="text-center">💰 В футляре</th>
+                <th width="150" class="text-center">🏢 Филиалов</th>
                         </tr>
                     </thead>
                     <tbody id="bank-coins-body"></tbody>
@@ -643,7 +678,7 @@ function parseBankCoinsData(data) {
         return [];
     }
     
-    // Структура листа sum2: [Дата, Название, Цена, Валюта, Металл, Количество, ID Филиалов]
+        // Структура из листа sums: [Дата, Название, Цена без футляра, Цена в футляре, Валюта, Металл, Количество, ID Филиалов]
     const rows = data.values;
     
     // Если есть заголовки - пропускаем первую строку
@@ -653,13 +688,14 @@ function parseBankCoinsData(data) {
         return {
             date: row[0] || '',
             name: row[1] || '',
-            price: parseFloat(row[2]) || 0,
-            currency: row[3] || 'BYN',
-            metal: row[4] || '',
-            count: parseInt(row[5]) || 0,
-            branches: row[6] || ''
+            priceWithoutCase: parseFloat(row[2]) || null, // Цена без футляра (может быть null)
+            priceWithCase: parseFloat(row[3]) || null,    // Цена с футляром (может быть null)
+            currency: row[4] || 'BYN',
+            metal: row[5] || '',
+            count: parseInt(row[6]) || 0,
+            branches: row[7] || ''
         };
-    }).filter(coin => coin.name && coin.price > 0); // Фильтруем пустые
+    }).filter(coin => coin.name && (coin.priceWithoutCase || coin.priceWithCase)); // Фильтруем, если есть хотя бы одна цена
 }
 
 // Отображение таблицы банковских монет
@@ -670,7 +706,7 @@ function renderBankCoinsTable() {
     if (bankCoinsData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="3" class="text-center text-muted py-4">
+                <td colspan="4" class="text-center text-muted py-4">
                     Нет данных о монетах в продаже
                 </td>
             </tr>
@@ -684,12 +720,30 @@ function renderBankCoinsTable() {
     
     let html = '';
     sorted.forEach(coin => {
-        // Форматируем цену
-        let priceText = coin.price ? coin.price.toFixed(2) : '';
+        // Форматируем цены
+        let priceWithoutCaseText = coin.priceWithoutCase ? 
+            coin.priceWithoutCase.toFixed(2) : '—';
+        let priceWithCaseText = coin.priceWithCase ? 
+            coin.priceWithCase.toFixed(2) : '—';
+        
+        // Стили для цен
+        let priceWithoutCaseClass = coin.priceWithoutCase ? 'text-primary fw-bold' : 'text-muted';
+        let priceWithCaseClass = coin.priceWithCase ? 'text-success fw-bold' : 'text-muted';
+        
+        // Проверяем, есть ли оба варианта
+        const hasBoth = coin.priceWithoutCase && coin.priceWithCase;
+        const hasOnlyWithout = coin.priceWithoutCase && !coin.priceWithCase;
+        const hasOnlyWith = !coin.priceWithoutCase && coin.priceWithCase;
+        
+        // Определяем иконку для типов доступности
+        let typeIcon = '';
+        if (hasBoth) typeIcon = '↔️';
+        else if (hasOnlyWithout) typeIcon = '📦';
+        else if (hasOnlyWith) typeIcon = '🎁';
         
         // Обрезаем длинное название
-        const shortName = coin.name.length > 70 
-            ? coin.name.substring(0, 67) + '...' 
+        const shortName = coin.name.length > 60 
+            ? coin.name.substring(0, 57) + '...' 
             : coin.name;
         
         // Цвет для количества филиалов
@@ -697,21 +751,48 @@ function renderBankCoinsTable() {
         if (coin.count <= 3) countClass = 'text-danger';
         else if (coin.count <= 10) countClass = 'text-warning';
         
+        // Дополнительная информация (металл, если есть)
+        let additionalInfo = '';
+        if (coin.metal) {
+            additionalInfo = `<div><small class="text-muted">${coin.metal}</small></div>`;
+        }
+        
         html += `
             <tr>
                 <td title="${coin.name}">
-                    ${shortName}
+                    ${typeIcon} ${shortName}
+                    ${additionalInfo}
                 </td>
-                <td class="text-center fw-bold">${priceText || '—'}</td>
+                <td class="text-center ${priceWithoutCaseClass}" title="${coin.priceWithoutCase ? coin.priceWithoutCase + ' ' + coin.currency : 'Нет в наличии'}">
+                    ${priceWithoutCaseText}
+                </td>
+                <td class="text-center ${priceWithCaseClass}" title="${coin.priceWithCase ? coin.priceWithCase + ' ' + coin.currency : 'Нет в наличии'}">
+                    ${priceWithCaseText}
+                </td>
                 <td class="text-center ${countClass} fw-bold" title="${coin.branches}">
                     ${coin.count}
+                    <small class="text-muted d-block">филиалов</small>
                 </td>
             </tr>
         `;
     });
     
     tbody.innerHTML = html;
-    countElement.textContent = `${sorted.length} монет в продаже`;
+    
+    // Подсчитываем статистику
+    const totalCoins = sorted.length;
+    const coinsWithBothPrices = sorted.filter(c => c.priceWithoutCase && c.priceWithCase).length;
+    const coinsWithCaseOnly = sorted.filter(c => !c.priceWithoutCase && c.priceWithCase).length;
+    const coinsWithoutCaseOnly = sorted.filter(c => c.priceWithoutCase && !c.priceWithCase).length;
+    
+    countElement.innerHTML = `
+        <small class="text-muted">
+            ${totalCoins} монет • 
+            <span class="text-primary">${coinsWithoutCaseOnly}</span> без футляра • 
+            <span class="text-success">${coinsWithCaseOnly}</span> в футляре • 
+            <span class="text-warning">${coinsWithBothPrices}</span> оба варианта
+        </small>
+    `;
 }
 
     // 2.1 Функция для преобразования данных из Google Sheets в массив объектов
