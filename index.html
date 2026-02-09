@@ -538,32 +538,24 @@
             
             <!-- Таблица банковских монет (скрыта) -->
             <div id="bank-coins-table" style="display: none;">
-                <div class="d-flex justify-content-between mb-2">
-        <div>
-            <small class="text-muted" id="bank-coins-count">Загрузка...</small>
-        </div>
-    </div>
+                <div class="mb-2">
+                    <!-- Всё будет в одной строке -->
+                    <small class="text-muted" id="bank-coins-count">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Загрузка данных...
+                    </small>
+                </div>
                 <table class="table table-hover table-sm">
                     <thead>
                         <tr>
-                <th>🪙 Название</th>
-                <th width="120" class="text-center">💰 Без футляра</th>
-                <th width="120" class="text-center">💰 В футляре</th>
-                <th width="150" class="text-center">🏢 Филиалов</th>
+                        <th>🪙 Название</th>
+                        <th width="120" class="text-center">💰 Без футляра</th>
+                        <th width="120" class="text-center">💰 В футляре</th>
+                        <th width="150" class="text-center">🏢 Филиалов</th>
                         </tr>
                     </thead>
                     <tbody id="bank-coins-body"></tbody>
                 </table>
-<!-- Новая строка с временем и кнопкой -->
-    <div class="d-flex justify-content-between align-items-center mt-2">
-        <small class="text-muted" id="last-update-time">
-            <i class="bi bi-clock"></i> Обновление: —
-        </small>
-        <button onclick="forceUpdateBankData()" 
-                class="btn btn-sm btn-outline-primary btn-refresh">
-            <i class="bi bi-arrow-clockwise"></i> Обновить
-        </button>
-    </div>
             </div>
         </div>
     </div>
@@ -612,10 +604,8 @@
     let currentViewMode = 'grid';
     let salesByYearChart = null;
     let priceTimelineChart = null;
-	let lastBankUpdateTime = null;
+    let lastDate = null;
     
-    
-
     // Инициализация
     document.addEventListener('DOMContentLoaded', function() {
         loadAllData();
@@ -624,7 +614,7 @@
     });
     	
 	// Добавьте в начало скрипта
-let monthlyStatsCache = {
+    let monthlyStatsCache = {
     data: null,
     timestamp: null
 };
@@ -668,8 +658,7 @@ async function loadBankCoinsData() {
             </tr>
         `;
         
-        // Загружаем данные и время одновременно
-        await getBankUpdateTime();
+        // Загружаем данные 
         const data = await fetchData('type=bankCoins');
         
         bankCoinsData = parseBankCoinsData(data);
@@ -698,8 +687,8 @@ function parseBankCoinsData(data) {
     const rows = data.values;
     
     // Если есть заголовки - пропускаем первую строку
-    const startRow = rows[0][0] === 'Дата' ? 1 : 0;
-    
+    lastDate = rows[0][0];
+    const startRow = 1;
     return rows.slice(startRow).map(row => {
         return {
             date: row[0] || '',
@@ -718,7 +707,6 @@ function parseBankCoinsData(data) {
 function renderBankCoinsTable() {
     const tbody = document.getElementById('bank-coins-body');
     const countElement = document.getElementById('bank-coins-count');
-const updateTimeElement = document.getElementById('last-update-time');
     let countFilial = 0;
     if (bankCoinsData.length === 0) {
         tbody.innerHTML = `
@@ -728,8 +716,12 @@ const updateTimeElement = document.getElementById('last-update-time');
                 </td>
             </tr>
         `;
-        countElement.textContent = 'монет: 0 • филиалов: 0';
-        updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление: нет данных';
+        countElement.innerHTML = `
+            <span class="text-muted">Монет: 0 • Филиалов: 0 • Обновление: нет данных</span>
+            <button onclick="forceUpdateBankData()" class="btn btn-sm btn-outline-primary ms-2">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        `;
         return;
     }
     
@@ -783,53 +775,57 @@ const updateTimeElement = document.getElementById('last-update-time');
     });
     
     tbody.innerHTML = html;
-    
     // Подсчитываем статистику
     const totalCoins = sorted.length;
-	countElement.textContent = `монет: ${totalCoins} • филиалов: ${countFilial}`;
-    
-        // Форматируем время
-    if (lastBankUpdateTime) {
-        const date = new Date(lastBankUpdateTime);
-        const timeStr = date.toLocaleTimeString('ru-RU', { 
+    let timeInfo = '';
+            // Форматируем время
+    if (lastDate) {
+        const date = new Date(lastDate);
+        timeStr = date.toLocaleTimeString('ru-RU', { 
             hour: '2-digit', 
             minute: '2-digit' 
         });
-        const dateStr = date.toLocaleDateString('ru-RU');
-        
-        updateTimeElement.innerHTML = `
-            <i class="bi bi-clock"></i> Обновление: ${dateStr} ${timeStr}
-        `;
+         dateStr = date.toLocaleDateString('ru-RU');
+         timeInfo = `Обновление: ${dateStr} ${timeStr}`;
     } else {
         updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление: неизвестно';
     }
-}
 
-// Функция получения времени обновления
-async function getBankUpdateTime() {
-    try {
-        const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?type=lastUpdate`);
-        const data = await response.json();
-        
-        if (data.lastUpdate) {
-            lastBankUpdateTime = data.lastUpdate;
-        }
-    } catch (error) {
-        console.error('Ошибка получения времени:', error);
-    }
+        // Обновляем строку со статистикой и кнопкой
+    countElement.innerHTML = `
+        <div class="text-end">
+            <span class="text-muted">
+            Монет: ${totalCoins} • Филиалов: ${countFilial} • ${timeInfo}
+        </span>
+        <button onclick="forceUpdateBankData()" class="btn btn-sm btn-outline-primary ms-2" id="refresh-btn">
+            <i class="bi bi-arrow-clockwise" id="refresh-icon"></i>
+        </button>
+        </div>
+    `;
 }
 
 // Функция принудительного обновления
 async function forceUpdateBankData() {
-    const refreshBtn = document.querySelector('.btn-refresh');
-    const updateTimeElement = document.getElementById('last-update-time');
+    const countElement = document.getElementById('bank-coins-count');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const refreshIcon = document.getElementById('refresh-icon');
     
-    // Блокируем кнопку
-    refreshBtn.disabled = true;
-    refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    // Сохраняем исходный текст
+    const originalText = countElement.innerHTML;
     
-    updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление...';
+    // Показываем процесс обновления
+    countElement.innerHTML = `
+        <span class="text-warning">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            Обновление данных...
+        </span>
+    `;
     
+        if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshIcon.className = 'bi bi-arrow-clockwise spin';
+    }
+
     try {
         // 1. Запускаем обновление
         const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?type=forceUpdate`);
@@ -840,7 +836,7 @@ async function forceUpdateBankData() {
         }
         
         // 2. Сохраняем новое время
-        lastBankUpdateTime = result.timestamp;
+        //lastBankUpdateTime = result.timestamp;
         
         // 3. Ждем 10 секунд для обработки данных
         await new Promise(resolve => setTimeout(resolve, 10000));
@@ -854,11 +850,22 @@ async function forceUpdateBankData() {
         
     } catch (error) {
         console.error('Ошибка обновления:', error);
-        updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Ошибка обновления';
+        
+        // Показываем ошибку
+        countElement.innerHTML = `
+            <span class="text-danger">
+                <i class="bi bi-exclamation-triangle"></i> Ошибка обновления
+            </span>
+            <button onclick="forceUpdateBankData()" class="btn btn-sm btn-outline-danger ms-2">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        `;
     } finally {
-        // Восстанавливаем кнопку
-        refreshBtn.disabled = false;
-        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить';
+                // Восстанавливаем кнопку если она существует
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshIcon.className = 'bi bi-arrow-clockwise';
+        }
     }
 }
 
