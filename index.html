@@ -283,7 +283,8 @@
         <div class="stats-card">
             <div class="d-flex justify-content-between">
                 <div class="w-100"> <!-- Добавим w-100 для ширины -->
-                    <h6 class="text-muted mb-2">Сделки прошлого месяца</h6>
+                    <!-- Заголовок будет обновляться динамически -->
+		<h6 class="text-muted mb-2" id="last-month-deals-title">Сделки прошлого месяца</h6>
                     <div class="row g-1"> <!-- Используем grid для компактности -->
                         <div class="col-6">
                             <div class="border-start border-3 border-success ps-2">
@@ -306,7 +307,6 @@
                     </div>
                 </div>
             </div>
-            <small id="last-month-label" class="text-muted">-</small>
         </div>
     </div>
     
@@ -702,7 +702,7 @@ function parseBankCoinsData(data) {
 function renderBankCoinsTable() {
     const tbody = document.getElementById('bank-coins-body');
     const countElement = document.getElementById('bank-coins-count');
-    
+    let countFilial = 0;
     if (bankCoinsData.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -735,12 +735,6 @@ function renderBankCoinsTable() {
         const hasOnlyWithout = coin.priceWithoutCase && !coin.priceWithCase;
         const hasOnlyWith = !coin.priceWithoutCase && coin.priceWithCase;
         
-        // Определяем иконку для типов доступности
-        let typeIcon = '';
-        if (hasBoth) typeIcon = '↔️';
-        else if (hasOnlyWithout) typeIcon = '📦';
-        else if (hasOnlyWith) typeIcon = '🎁';
-        
         // Обрезаем длинное название
         const shortName = coin.name.length > 60 
             ? coin.name.substring(0, 57) + '...' 
@@ -750,18 +744,12 @@ function renderBankCoinsTable() {
         let countClass = 'text-success'; // >10 - зеленый
         if (coin.count <= 3) countClass = 'text-danger';
         else if (coin.count <= 10) countClass = 'text-warning';
-        
-        // Дополнительная информация (металл, если есть)
-        let additionalInfo = '';
-        if (coin.metal) {
-            additionalInfo = `<div><small class="text-muted">${coin.metal}</small></div>`;
-        }
+        countFilial += coin.count;
         
         html += `
             <tr>
                 <td title="${coin.name}">
-                    ${typeIcon} ${shortName}
-                    ${additionalInfo}
+                    ${shortName}
                 </td>
                 <td class="text-center ${priceWithoutCaseClass}" title="${coin.priceWithoutCase ? coin.priceWithoutCase + ' ' + coin.currency : 'Нет в наличии'}">
                     ${priceWithoutCaseText}
@@ -771,7 +759,6 @@ function renderBankCoinsTable() {
                 </td>
                 <td class="text-center ${countClass} fw-bold" title="${coin.branches}">
                     ${coin.count}
-                    <small class="text-muted d-block">филиалов</small>
                 </td>
             </tr>
         `;
@@ -781,16 +768,12 @@ function renderBankCoinsTable() {
     
     // Подсчитываем статистику
     const totalCoins = sorted.length;
-    const coinsWithBothPrices = sorted.filter(c => c.priceWithoutCase && c.priceWithCase).length;
-    const coinsWithCaseOnly = sorted.filter(c => !c.priceWithoutCase && c.priceWithCase).length;
-    const coinsWithoutCaseOnly = sorted.filter(c => c.priceWithoutCase && !c.priceWithCase).length;
+
     
     countElement.innerHTML = `
         <small class="text-muted">
-            ${totalCoins} монет • 
-            <span class="text-primary">${coinsWithoutCaseOnly}</span> без футляра • 
-            <span class="text-success">${coinsWithCaseOnly}</span> в футляре • 
-            <span class="text-warning">${coinsWithBothPrices}</span> оба варианта
+           монет - ${totalCoins}  • 
+            филиалов - <span class="text-primary">${countFilial}</span> 
         </small>
     `;
 }
@@ -1405,23 +1388,29 @@ function getTopCoinsBySales(count = 12) {
     // === 3. КАРТОЧКА 2: Сделки прошлого месяца (в рублях) ===
     const lastMonthDeals = getLastMonthDeals();
     
-    // Максимальная сделка
-    document.getElementById('max-deal-price').textContent = lastMonthDeals.max.price + ' р.';
-    document.getElementById('max-deal-name').textContent = truncate(lastMonthDeals.max.name, 25) || 'Нет данных';
-    
-    // Минимальная сделка
-    document.getElementById('min-deal-price').textContent = lastMonthDeals.min.price + ' р.';
-    document.getElementById('min-deal-name').textContent = truncate(lastMonthDeals.min.name, 25) || 'Нет данных';
-    
-    // Месяц
+    // Форматируем название месяца и года для заголовка
     const now = new Date();
     const lastMonthIdx = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
     const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-                       'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                       'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
     
-    document.getElementById('last-month-label').innerHTML = 
-        `<i class="bi bi-calendar"></i> ${monthNames[lastMonthIdx]} ${lastMonthYear}`;
+    // Обновляем заголовок карточки
+    const monthTitle = monthNames[lastMonthIdx];
+    document.getElementById('last-month-deals-title').textContent = 
+        `Сделки ${monthTitle} ${lastMonthYear}`;
+    
+    // Максимальная сделка
+    const maxPrice = lastMonthDeals.max.price || '0';
+    const maxName = lastMonthDeals.max.name || 'Нет данных';
+    document.getElementById('max-deal-price').textContent = maxPrice + ' р.';
+    document.getElementById('max-deal-name').textContent = truncate(maxName, 25);
+    
+    // Минимальная сделка
+    const minPrice = lastMonthDeals.min.price || '0';
+    const minName = lastMonthDeals.min.name || 'Нет данных';
+    document.getElementById('min-deal-price').textContent = minPrice + ' р.';
+    document.getElementById('min-deal-name').textContent = truncate(minName, 25);
     
     // === 4. КАРТОЧКА 3: Активные позиции ===
     document.getElementById('active-coins').textContent = activeCoins;
