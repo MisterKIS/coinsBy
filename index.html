@@ -28,7 +28,20 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
+/* Добавьте в ваш CSS */
+.btn-refresh {
+    padding: 2px 8px;
+    font-size: 0.8rem;
+}
 
+.btn-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#last-update-time {
+    font-size: 0.85rem;
+}
 .price-cell {
     min-width: 80px;
 }
@@ -525,9 +538,11 @@
             
             <!-- Таблица банковских монет (скрыта) -->
             <div id="bank-coins-table" style="display: none;">
-                <div class="text-end mb-2">
-                    <small class="text-muted" id="bank-coins-count">Загрузка...</small>
-                </div>
+                <div class="d-flex justify-content-between mb-2">
+        <div>
+            <small class="text-muted" id="bank-coins-count">Загрузка...</small>
+        </div>
+    </div>
                 <table class="table table-hover table-sm">
                     <thead>
                         <tr>
@@ -539,6 +554,16 @@
                     </thead>
                     <tbody id="bank-coins-body"></tbody>
                 </table>
+<!-- Новая строка с временем и кнопкой -->
+    <div class="d-flex justify-content-between align-items-center mt-2">
+        <small class="text-muted" id="last-update-time">
+            <i class="bi bi-clock"></i> Обновление: —
+        </small>
+        <button onclick="forceUpdateBankData()" 
+                class="btn btn-sm btn-outline-primary btn-refresh">
+            <i class="bi bi-arrow-clockwise"></i> Обновить
+        </button>
+    </div>
             </div>
         </div>
     </div>
@@ -587,6 +612,7 @@
     let currentViewMode = 'grid';
     let salesByYearChart = null;
     let priceTimelineChart = null;
+	let lastBankUpdateTime = null;
     
     
 
@@ -611,28 +637,19 @@ function setupTableToggle() {
     toggle.addEventListener('change', function() {
         const recentTable = document.getElementById('recent-sales-table');
         const bankTable = document.getElementById('bank-coins-table');
-        const title = document.getElementById('table-title');
-        const label = document.getElementById('toggle-label');
         
         if (this.checked) {
-            // Показать банковские монеты
             recentTable.style.display = 'none';
             bankTable.style.display = 'block';
-            title.textContent = 'Наличие медно-никелевых монет в продаже Беларусбанка';
-            label.textContent = 'Показать последние выпуски монет НБРБ';
             
-            // Загрузить если еще не загружены
             if (bankCoinsData.length === 0) {
                 loadBankCoinsData();
             } else {
                 renderBankCoinsTable();
             }
         } else {
-            // Показать последние выпуски
             recentTable.style.display = 'block';
             bankTable.style.display = 'none';
-            title.textContent = 'Наличие медно-никелевых монет в продаже Беларусбанка';
-            label.textContent = 'Показать последние выпуски монет НБРБ';
         }
     });
 }
@@ -641,31 +658,30 @@ function setupTableToggle() {
 async function loadBankCoinsData() {
     try {
         const tbody = document.getElementById('bank-coins-body');
-        const countElement = document.getElementById('bank-coins-count');
         
-        // Показать загрузку
         tbody.innerHTML = `
             <tr>
-                <td colspan="3" class="text-center py-4">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    <span class="ms-2">Загрузка данных...</span>
+                <td colspan="4" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm"></div>
+                    <span class="ms-2">Загрузка...</span>
                 </td>
             </tr>
         `;
         
-        // Получаем данные через ваш существующий механизм
+        // Загружаем данные и время одновременно
+        await getBankUpdateTime();
         const data = await fetchData('type=bankCoins');
+        
         bankCoinsData = parseBankCoinsData(data);
-        // Отображаем
         renderBankCoinsTable();
         
     } catch (error) {
-        console.error('Ошибка загрузки банковских монет:', error);
+        console.error('Ошибка загрузки:', error);
         const tbody = document.getElementById('bank-coins-body');
         tbody.innerHTML = `
             <tr>
-                <td colspan="3" class="text-center text-danger py-3">
-                    Ошибка: ${error.message}
+                <td colspan="4" class="text-center text-danger py-3">
+                    Ошибка загрузки
                 </td>
             </tr>
         `;
@@ -702,6 +718,7 @@ function parseBankCoinsData(data) {
 function renderBankCoinsTable() {
     const tbody = document.getElementById('bank-coins-body');
     const countElement = document.getElementById('bank-coins-count');
+const updateTimeElement = document.getElementById('last-update-time');
     let countFilial = 0;
     if (bankCoinsData.length === 0) {
         tbody.innerHTML = `
@@ -711,7 +728,8 @@ function renderBankCoinsTable() {
                 </td>
             </tr>
         `;
-        countElement.textContent = '0 монет';
+        countElement.textContent = 'монет: 0 • филиалов: 0';
+        updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление: нет данных';
         return;
     }
     
@@ -768,14 +786,80 @@ function renderBankCoinsTable() {
     
     // Подсчитываем статистику
     const totalCoins = sorted.length;
-
+	countElement.textContent = `монет: ${totalCoins} • филиалов: ${countFilial}`;
     
-    countElement.innerHTML = `
-        <small class="text-muted">
-           монет - ${totalCoins}  • 
-            филиалов - <span class="text-primary">${countFilial}</span> 
-        </small>
-    `;
+        // Форматируем время
+    if (lastBankUpdateTime) {
+        const date = new Date(lastBankUpdateTime);
+        const timeStr = date.toLocaleTimeString('ru-RU', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        const dateStr = date.toLocaleDateString('ru-RU');
+        
+        updateTimeElement.innerHTML = `
+            <i class="bi bi-clock"></i> Обновление: ${dateStr} ${timeStr}
+        `;
+    } else {
+        updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление: неизвестно';
+    }
+}
+
+// Функция получения времени обновления
+async function getBankUpdateTime() {
+    try {
+        const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?type=lastUpdate`);
+        const data = await response.json();
+        
+        if (data.lastUpdate) {
+            lastBankUpdateTime = data.lastUpdate;
+        }
+    } catch (error) {
+        console.error('Ошибка получения времени:', error);
+    }
+}
+
+// Функция принудительного обновления
+async function forceUpdateBankData() {
+    const refreshBtn = document.querySelector('.btn-refresh');
+    const updateTimeElement = document.getElementById('last-update-time');
+    
+    // Блокируем кнопку
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Обновление...';
+    
+    try {
+        // 1. Запускаем обновление
+        const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?type=forceUpdate`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Ошибка');
+        }
+        
+        // 2. Сохраняем новое время
+        lastBankUpdateTime = result.timestamp;
+        
+        // 3. Ждем 10 секунд для обработки данных
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        // 4. Перезагружаем данные
+        const data = await fetchData('type=bankCoins');
+        bankCoinsData = parseBankCoinsData(data);
+        
+        // 5. Обновляем таблицу
+        renderBankCoinsTable();
+        
+    } catch (error) {
+        console.error('Ошибка обновления:', error);
+        updateTimeElement.innerHTML = '<i class="bi bi-clock"></i> Ошибка обновления';
+    } finally {
+        // Восстанавливаем кнопку
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить';
+    }
 }
 
     // 2.1 Функция для преобразования данных из Google Sheets в массив объектов
@@ -1404,13 +1488,13 @@ function getTopCoinsBySales(count = 12) {
     const maxPrice = lastMonthDeals.max.price || '0';
     const maxName = lastMonthDeals.max.name || 'Нет данных';
     document.getElementById('max-deal-price').textContent = maxPrice + ' р.';
-    document.getElementById('max-deal-name').textContent = truncate(maxName, 25);
+    document.getElementById('max-deal-name').textContent = truncate(maxName, 19);
     
     // Минимальная сделка
     const minPrice = lastMonthDeals.min.price || '0';
     const minName = lastMonthDeals.min.name || 'Нет данных';
     document.getElementById('min-deal-price').textContent = minPrice + ' р.';
-    document.getElementById('min-deal-name').textContent = truncate(minName, 25);
+    document.getElementById('min-deal-name').textContent = truncate(minName, 19);
     
     // === 4. КАРТОЧКА 3: Активные позиции ===
     document.getElementById('active-coins').textContent = activeCoins;
